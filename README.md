@@ -378,10 +378,10 @@ ship blueprint tables.
 
 ## Licence
 
-Not chosen yet. Note that `include/coriolis/adlib_synth.h` and `src/adlib_synth.cpp` carry over code that is
-Copyright (c) 2026 Astute Systems PTY LTD from the Atlas project, whose files say they are licensed under that project's
-commercial licence; the notice is kept at the top of both files. The licence of this project has to be chosen with that
-in mind.
+MIT, see [LICENSE](LICENSE). Note that `include/coriolis/adlib_synth.h` and `src/adlib_synth.cpp` carry over code that
+is Copyright (c) 2026 Astute Systems PTY LTD from the Atlas project; the notice is kept at the top of both files. The
+Atlas files say they are under that project's own licence, so the owner of that code has to agree to it being
+released here under the MIT licence.
 
 ## What is not done yet
 
