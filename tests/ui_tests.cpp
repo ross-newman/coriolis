@@ -257,7 +257,7 @@ void TheTractorBeamLandsTheShipAndThenTheStationScreensCome() {
 }
 
 void AFullRoundTripSavesAndContinues() {
-  const std::string path = "/tmp/coriolis_ui_test_save.json";
+  const std::string path = "coriolis_ui_test_save.json";
   std::remove(path.c_str());
   // The computer pilot can be shot down by a pirate before it gets back, as a person can: so try a few seeds
   bool round_trip = false;
@@ -304,7 +304,7 @@ void AFullRoundTripSavesAndContinues() {
 }
 
 void ExplicitSaveInTheStation() {
-  const std::string path = "/tmp/coriolis_ui_test_save2.json";
+  const std::string path = "coriolis_ui_test_save2.json";
   std::remove(path.c_str());
   GameUi ui(path, 3);
   ui.Key(UiKey::kAccept);
