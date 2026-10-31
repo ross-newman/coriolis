@@ -62,6 +62,8 @@ if(OPEN_ELITE_BUILD_APPS)
   target_link_libraries(flight_view PRIVATE open_elite)
   add_executable(sound_demo apps/sound_demo/main.cpp)
   target_link_libraries(sound_demo PRIVATE open_elite)
+  add_executable(site_gen apps/site_gen/main.cpp)
+  target_link_libraries(site_gen PRIVATE open_elite)
 endif()
 
 # Controller input through SDL3: Xbox 360, Xbox One and Xbox Elite pads. Optional, the rest builds without SDL.

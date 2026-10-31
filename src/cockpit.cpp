@@ -436,6 +436,12 @@ struct PlanetStyle {
   float ice_latitude;    ///< |y| above which there is ice, above 1 for none
   float glow_thickness;  ///< Of the atmosphere, as a fraction of the radius; 0 for none
   float glow_strength;
+  float ring_inner = 0.0f;  ///< Inner and outer edge of the rings in planet radii; 0 for no rings
+  float ring_outer = 0.0f;
+  float ring_gap = 0.5f;  ///< Where the main gap lies, from 0 at the inner edge to 1 at the outer
+  Rgb ring_colour{200, 185, 160};
+  Vec3d ring_axis{0.0, 1.0, 0.0};  ///< Normal of the ring plane, in world space
+  const char* name = "";           ///< The kind of world, for captions
 };
 
 /// A colour nudged a little in each channel, so no two planets of a type match exactly
@@ -482,6 +488,12 @@ PlanetStyle StyleFor(std::uint32_t seed) {
       {PlanetKind::kBanded, {232, 216, 172}, {172, 140, 108}, {140, 110, 90}, {255, 255, 255}, {240, 220, 170}, 0.5f, 3.0f, 1.5f},
   };
   constexpr std::uint32_t kTypeCount = sizeof(kTypes) / sizeof(kTypes[0]);
+  // In the order of kTypes
+  static const char* const kNames[] = {"Temperate world", "Desert world", "Cratered moon",   "Rust world",
+                                       "Ocean world",     "Frozen world", "Violet jungle",   "Toxic world",
+                                       "Coral world",     "Teal seas",    "Volcanic world",  "Amber gas giant",
+                                       "Blue gas giant",  "Cream gas giant"};
+  static_assert(sizeof(kNames) / sizeof(kNames[0]) == kTypeCount, "a name for each type of planet");
   const std::uint32_t h = Hash32(seed);
   const Type& t = kTypes[h % kTypeCount];
   const std::uint32_t j = Hash32(h ^ 0x9E3779B9U);
@@ -509,6 +521,21 @@ PlanetStyle StyleFor(std::uint32_t seed) {
   static const float kStrength[] = {0.0f, 0.5f, 0.8f, 1.0f};
   s.glow_thickness = kThickness[grade];
   s.glow_strength = kStrength[grade];
+  // Rings: most gas giants have them, a few other worlds too, tilted to the way the planet turns
+  const std::uint32_t r = Hash32(a ^ 0xC0FFEE11U);
+  if (r % 100U < (t.kind == PlanetKind::kBanded ? 75U : 18U)) {
+    const float u1 = static_cast<float>((r >> 8) & 255U) / 255.0f;
+    const float u2 = static_cast<float>((r >> 16) & 255U) / 255.0f;
+    const float u3 = static_cast<float>((r >> 24) & 255U) / 255.0f;
+    s.ring_inner = 1.25f + 0.25f * u1;
+    s.ring_outer = s.ring_inner + 0.55f + 0.5f * u2;
+    s.ring_gap = 0.55f + 0.2f * u3;
+    s.ring_colour = t.kind == PlanetKind::kBanded ? Mix(s.land, {236, 226, 200}, 0.55f) : Jitter({196, 182, 160}, r, 0.12f);
+    const double tilt = 0.25 + 0.5 * u1;
+    const double turn = 6.283185307179586 * u3;
+    s.ring_axis = {std::sin(tilt) * std::cos(turn), std::cos(tilt), std::sin(tilt) * std::sin(turn)};
+  }
+  s.name = kNames[h % kTypeCount];
   return s;
 }
 
@@ -517,11 +544,14 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
               std::uint32_t style_seed) {
   const double d = Length(centre);
   const double radius = body.radius;
-  if (d <= radius || (centre.z < -radius && d > 3.0 * radius)) {
-    return;
-  }
   const bool sun = body.kind == EntityKind::kSun;
   const PlanetStyle style = StyleFor(style_seed);
+  const bool ringed = !sun && style.ring_outer > 0.0f;
+  // Everything of the body lies inside a sphere this big
+  const double reach_radius = ringed ? radius * style.ring_outer : radius;
+  if (d <= radius || (centre.z < -reach_radius && d > 3.0 * reach_radius)) {
+    return;
+  }
   int x0 = 0;
   int x1 = canvas.width() - 1;
   int y0 = 0;
@@ -534,11 +564,11 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
     // tangent planes through the camera: one pair for x (in the x-z plane) and one for y (in the y-z plane).
     const auto extent = [&](double a, double& lo, double& hi) {
       const double dist = std::hypot(a, centre.z);
-      if (dist <= radius) {
+      if (dist <= reach_radius) {
         return false;
       }
       const double theta = std::atan2(a, centre.z);
-      const double alpha = std::asin(radius / dist);
+      const double alpha = std::asin(reach_radius / dist);
       if (theta + alpha >= 1.5 || theta - alpha <= -1.5) {
         return false;  // reaches to the side of the camera: unbounded on this axis
       }
@@ -659,6 +689,65 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
         }
       }
       canvas.Set(x, y, colour);
+    }
+  }
+  if (!ringed) {
+    return;
+  }
+
+  // The rings: a flat disc with a hole, seen by crossing each pixel's ray with its plane. The depth buffer puts
+  // the near half in front of the planet and the far half behind it.
+  const Vec3d axis = Rotate(Conjugate(cam.q), style.ring_axis);
+  const double axis_centre = Dot(axis, centre);
+  const double light_side = Dot(axis, light);
+  // The sun shines on the side of the rings the ship sees, or on the far side, which is dim
+  const float side = (light_side > 0.0) == (axis_centre < 0.0) ? 1.0f : 0.35f;
+  const float offset = static_cast<float>(Hash32(style_seed ^ 0x5EED1234U) & 1023U) * 0.53f;
+  const double inner = style.ring_inner;
+  const double outer = style.ring_outer;
+  for (int y = y0; y <= y1; ++y) {
+    for (int x = x0; x <= x1; ++x) {
+      const Vec3d ray{(x + 0.5 - cam.cx) / cam.f, -(y + 0.5 - cam.cy) / cam.f, 1.0};
+      const double slope = Dot(axis, ray);
+      if (std::fabs(slope) < 1e-9) {
+        continue;
+      }
+      const double t = axis_centre / slope;
+      if (t <= 0.0) {
+        continue;
+      }
+      const Vec3d p = ray * t;
+      const Vec3d off = p - centre;
+      const double rd = Length(off) / radius;
+      if (rd < inner || rd > outer) {
+        continue;
+      }
+      const float inv = static_cast<float>(1.0 / t);
+      if (inv <= canvas.depth(x, y)) {
+        continue;
+      }
+      // Fine bands and one wide gap, thinning out at both edges
+      const float u = static_cast<float>((rd - inner) / (outer - inner));
+      const float coarse = Noise3(u * 9.0f + offset, 1.7f, 3.1f);
+      const float fine = Noise3(u * 41.0f + offset, 5.3f, 0.7f);
+      float density = 0.25f + 0.9f * (0.55f * coarse + 0.45f * fine);
+      density *= 0.08f + 0.92f * std::clamp(std::fabs(u - style.ring_gap) / 0.05f, 0.0f, 1.0f);
+      density *= std::clamp(u / 0.05f, 0.0f, 1.0f) * std::clamp((1.0f - u) / 0.05f, 0.0f, 1.0f);
+      const float alpha = std::clamp((density - 0.3f) * 1.8f, 0.0f, 0.92f);
+      if (alpha < 0.03f) {
+        continue;
+      }
+      // The planet casts its shadow on the rings
+      float lit = side * (0.55f + 0.45f * fine);
+      const double toward = Dot(off, light);
+      if (toward < 0.0 && Dot(off, off) - toward * toward < radius * radius) {
+        lit *= 0.15f;
+      }
+      const Rgb colour = Scale(Mix(style.ring_colour, Scale(style.ring_colour, 0.6f), fine), lit);
+      canvas.Set(x, y, Mix(canvas.Get(x, y), colour, alpha));
+      if (alpha > 0.5f) {
+        canvas.depth(x, y) = inv;
+      }
     }
   }
 }
@@ -2063,6 +2152,40 @@ void Cockpit::Render(Image& image, const Game& game, std::uint32_t frame) {
   if (bloom_) {
     Bloom(image, 0.45f);
   }
+}
+
+PlanetPortraitInfo DescribePlanet(std::uint32_t system_seed) {
+  const PlanetStyle style = StyleFor(system_seed);
+  return {style.name, style.ring_outer > 0.0f, style.glow_thickness > 0.0f};
+}
+
+void DrawPlanetPortrait(Image& image, std::uint32_t system_seed, double turn) {
+  image.Clear({0, 0, 0});
+  const int width = static_cast<int>(image.width());
+  const int height = static_cast<int>(image.height());
+  if (width < 16 || height < 16) {
+    return;
+  }
+  DrawNebula(image, system_seed, 0);
+  DrawStars(image, 0);
+  const PlanetStyle style = StyleFor(system_seed);
+  Canvas canvas(image, height);
+  Camera cam;
+  // Look down on the rings a little, and turn the world to show a different face
+  cam.q = FromAxisAngle({0.0, 1.0, 0.0}, turn) * FromAxisAngle({1.0, 0.0, 0.0}, -0.35);
+  cam.origin = {0.0, 0.0, 0.0};
+  cam.f = 0.7 * width;
+  cam.cx = width / 2.0;
+  cam.cy = height / 2.0;
+  Entity body;
+  body.kind = EntityKind::kPlanet;
+  body.radius = 1000.0;
+  // Fit the planet, with its rings, in the picture
+  const double reach = style.ring_outer > 0.0f ? body.radius * style.ring_outer : body.radius;
+  const double wanted = (style.ring_outer > 0.0f ? 0.46 : 0.40) * std::min(width, height);
+  const double distance = reach * std::sqrt(1.0 + (cam.f / wanted) * (cam.f / wanted));
+  const Vec3d light = Normalized(Vec3d{-0.7, 0.35, -0.55});
+  DrawBody(canvas, cam, body, {0.0, 0.0, distance}, light, system_seed);
 }
 
 }  // namespace open_elite

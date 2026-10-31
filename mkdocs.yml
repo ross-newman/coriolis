@@ -1,0 +1,35 @@
+site_name: Open Elite
+site_description: An open source space trading game, game engine and ship rendering engine
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: black
+    accent: green
+  features:
+    - navigation.top
+    - navigation.sections
+    - toc.follow
+    - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - tables
+  - attr_list
+  - admonition
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Playing: playing.md
+  - Ships: ships.md
+  - Stations: stations.md
+  - Upgrades: upgrades.md
+  - Trade goods: trade-goods.md
+  - Worlds: planets.md

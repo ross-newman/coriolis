@@ -79,6 +79,19 @@ class Cockpit {
   double hull_flash_ = 0.0;
 };
 
+/// What the planet of a system is like, as the cockpit draws it
+struct PlanetPortraitInfo {
+  /// The kind of world: "Temperate world", "Desert world", "Volcanic world", "Amber gas giant" ...
+  const char* type;
+  bool rings;
+  bool atmosphere;
+};
+PlanetPortraitInfo DescribePlanet(std::uint32_t system_seed);
+
+/// A picture of the planet of a system on its own, over its gas clouds and stars: the same planet the cockpit draws,
+/// lit from the left. `turn` (radians) shows a different face of it.
+void DrawPlanetPortrait(Image& image, std::uint32_t system_seed, double turn = 0.0);
+
 }  // namespace open_elite
 
 #endif  // OPEN_ELITE_COCKPIT_H_
