@@ -1,6 +1,6 @@
 name: Windows installer
 
-# Builds the game for Windows with MSYS2 (MinGW-w64 and SDL2), runs the tests, makes the NSIS installer with CPack,
+# Builds the game for Windows with MSYS2 (UCRT64 MinGW-w64 and SDL2), runs the tests, makes the NSIS installer with CPack,
 # installs it silently and starts the game from the installed folder. Pushing a tag such as v1.2.0 attaches the
 # installer to a GitHub release of that tag.
 
@@ -23,7 +23,7 @@ jobs:
     name: NSIS installer for Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Work out the version
         shell: pwsh
         run: |
@@ -35,14 +35,14 @@ jobs:
           "CORIOLIS_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           update: false
           install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-SDL2
-            mingw-w64-x86_64-nsis
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-SDL2
+            mingw-w64-ucrt-x86_64-nsis
       - name: Configure
         shell: msys2 {0}
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCORIOLIS_PACKAGE_VERSION="$CORIOLIS_VERSION"
@@ -72,7 +72,7 @@ jobs:
           if ($game.ExitCode -ne 0) { throw "the installed game exited with $($game.ExitCode)" }
           if (-not (Test-Path C:\coriolis-shot.png)) { throw 'the installed game drew no picture' }
           Get-Item C:\coriolis-shot.png | Select-Object Length
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-installer
           path: build/coriolis-*-windows-x64.exe
@@ -86,7 +86,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: windows-installer
           path: installer
