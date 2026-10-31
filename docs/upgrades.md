@@ -13,6 +13,8 @@ What the equipment screen sells, each as a 3D model drawn from two sides, the sa
 | [Beam laser](#beam-laser) | 1000 Cr | 7 |
 | [Military laser](#military-laser) | 6000 Cr | 10 |
 | [Fuel](#fuel) | 2 Cr a light year | 1 |
+| [Extra cargo bay](#extra-cargo-bay) | 400 Cr | 5 |
+| [Galactic hyperdrive](#galactic-hyperdrive) | 5000 Cr | 10 |
 
 ![The equipment screen](img/screens/equipment.webp){ loading=lazy }
 
@@ -69,4 +71,16 @@ The best laser in the game: 34 damage a shot.
 ![Fuel](img/items/item_08.webp){ loading=lazy }
 
 Fuel for hyperspace, sold by the light year.
+
+### Extra cargo bay
+
+![Extra cargo bay](img/items/item_09.webp){ loading=lazy }
+
+Fifteen more tonnes of hold. It stays with you when you change ship.
+
+### Galactic hyperdrive
+
+![Galactic hyperdrive](img/items/item_10.webp){ loading=lazy }
+
+Press J in flight to jump to the next galaxy: the ship arrives at the system nearest the same place on the chart. It uses no fuel, and the drive is used up.
 

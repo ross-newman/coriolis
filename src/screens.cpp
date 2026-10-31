@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 
+#include "coriolis/blueprint.h"
 #include "coriolis/commodity_models.h"
 #include "coriolis/equipment_models.h"
 #include "coriolis/renderer.h"
@@ -99,6 +100,8 @@ const EquipmentRow kEquipment[] = {
     {Item::kBeamLaser, "BEAM LASER"},
     {Item::kDockingComputer, "DOCKING COMPUTER"},
     {Item::kMilitaryLaser, "MILITARY LASER"},
+    {Item::kCargoBay, "EXTRA CARGO BAY"},
+    {Item::kGalacticHyperdrive, "GALACTIC HYPERDRIVE"},
 };
 
 bool Owned(const Commander& c, Item item) {
@@ -119,6 +122,10 @@ bool Owned(const Commander& c, Item item) {
       return c.equipment.laser_level >= 2;
     case Item::kMissile:
       return c.missiles >= 4;
+    case Item::kCargoBay:
+      return c.equipment.cargo_bay;
+    case Item::kGalacticHyperdrive:
+      return c.equipment.galactic_hyperdrive;
     case Item::kFuel:
       return c.fuel >= kMaxFuel - 1e-9;
   }
@@ -156,7 +163,9 @@ void DrawStatusScreen(Image& image, const Game& game) {
     const char* name;
   } fitted[] = {{c.equipment.ecm, "E.C.M. SYSTEM"},          {c.equipment.fuel_scoop, "FUEL SCOOPS"},
                 {c.equipment.docking_computer, "DOCKING COMPUTER"}, {c.equipment.energy_bomb, "ENERGY BOMB"},
-                {c.equipment.escape_pod, "ESCAPE POD"}};
+                {c.equipment.escape_pod, "ESCAPE POD"},
+                {c.equipment.cargo_bay, "EXTRA CARGO BAY"},
+                {c.equipment.galactic_hyperdrive, "GALACTIC HYPERDRIVE"}};
   for (const auto& f : fitted) {
     if (f.have) {
       p.Line(std::string("  ") + f.name);
@@ -265,6 +274,63 @@ void DrawEquipmentScreen(Image& image, const Game& game, int selected, float ang
     const std::int64_t tile_w = std::min(room_w, side * 2);
     DrawPreview(image, GetItemModel(kEquipment[selected].item), (static_cast<std::int64_t>(image.width()) - tile_w) / 2, top,
                 tile_w, side, angle);
+  }
+}
+
+void DrawShipyardScreen(Image& image, const Game& game, int selected, float angle) {
+  Page p(image);
+  const Commander& c = game.commander();
+  p.Title("SHIPYARD");
+  const ShipForSale* mine = FindShipForSale(c.ship);
+  char line[112];
+  std::snprintf(line, sizeof line, "CASH: %s   TECH LEVEL %d", Credits(c.credits).c_str(), game.system().tech_level);
+  p.Line(line, kBright);
+  std::snprintf(line, sizeof line, "YOUR SHIP: %s   TRADE-IN %s", mine != nullptr ? mine->name : "UNKNOWN",
+                Credits(TradeInValue(c)).c_str());
+  p.Line(line);
+  p.Gap();
+  p.At("SHIP", 2, kDim);
+  p.At("HOLD", 20, kDim);
+  p.At("PRICE", 28, kDim);
+  p.Next();
+  for (int i = 0; i < ShipForSaleCount(); ++i) {
+    const ShipForSale& s = ShipForSaleAt(i);
+    const bool here = i == selected;
+    const bool mine_now = c.ship == s.id;
+    const bool for_sale = game.system().tech_level >= s.tech_level;
+    const Rgb colour = !for_sale ? kDim : (here ? kBright : kText);
+    const int hold = s.hold + (c.equipment.cargo_bay ? kCargoBayExtra : 0);
+    char tonnes[16];
+    std::snprintf(tonnes, sizeof tonnes, "%d T", hold);
+    char price[48];
+    if (mine_now) {
+      std::snprintf(price, sizeof price, "YOURS");
+    } else if (!for_sale) {
+      std::snprintf(price, sizeof price, "NOT SOLD HERE");
+    } else {
+      std::snprintf(price, sizeof price, "%s", Credits(static_cast<std::int64_t>(s.price) - TradeInValue(c)).c_str());
+    }
+    p.At(here ? ">" : " ", 0, kTitle);
+    p.At(s.name, 2, colour);
+    p.At(tonnes, 20, colour);
+    p.At(price, 28, colour);
+    p.Next();
+  }
+  p.Gap();
+  p.Line("THE PRICE IS WHAT YOU PAY AFTER THE TRADE-IN OF YOUR SHIP", kDim);
+  p.Line("EQUIPMENT AND MISSILES GO ACROSS; THE HOLD MUST BE ABLE TO TAKE YOUR CARGO", kDim);
+
+  if (selected >= 0 && selected < ShipForSaleCount()) {
+    const Blueprint* bp = FindBuiltInBlueprint(ShipForSaleAt(selected).id);
+    if (bp != nullptr) {
+      const std::int64_t top = p.y + p.line_height / 2;
+      const std::int64_t room_h = static_cast<std::int64_t>(image.height()) - top - p.margin;
+      const std::int64_t room_w = static_cast<std::int64_t>(image.width()) - 2 * p.margin;
+      const std::int64_t side = std::min(room_h, room_w / 2);
+      const std::int64_t tile_w = std::min(room_w, side * 2);
+      DrawPreview(image, BlueprintToModel(*bp), (static_cast<std::int64_t>(image.width()) - tile_w) / 2, top, tile_w, side,
+                  angle);
+    }
   }
 }
 

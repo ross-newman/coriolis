@@ -208,6 +208,10 @@ const ItemText kItemText[] = {
     {Item::kBeamLaser, "A better laser than the pulse laser the ship comes with: 26 damage a shot against 18."},
     {Item::kMilitaryLaser, "The best laser in the game: 34 damage a shot."},
     {Item::kFuel, "Fuel for hyperspace, sold by the light year."},
+    {Item::kCargoBay, "Fifteen more tonnes of hold. It stays with you when you change ship."},
+    {Item::kGalacticHyperdrive,
+     "Press J in flight to jump to the next galaxy: the ship arrives at the system nearest the same place on the chart. "
+     "It uses no fuel, and the drive is used up."},
 };
 
 const char* const kGoodText[kCommodityCount] = {
@@ -862,6 +866,8 @@ int main(int argc, char** argv) {
     failures += Save(image, png + "/screens/market.png") ? 0 : 1;
     DrawEquipmentScreen(image, game, 3);
     failures += Save(image, png + "/screens/equipment.png") ? 0 : 1;
+    DrawShipyardScreen(image, game, 3);
+    failures += Save(image, png + "/screens/shipyard.png") ? 0 : 1;
     DrawChartScreen(image, game);
     failures += Save(image, png + "/screens/chart.png") ? 0 : 1;
     DrawSystemScreen(image, game, game.selected_system());

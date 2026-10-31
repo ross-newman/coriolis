@@ -10,7 +10,7 @@
 namespace coriolis {
 
 /// The number of things for sale: every Item
-constexpr std::size_t kItemCount = 9;
+constexpr std::size_t kItemCount = 11;
 
 /// The 3D model of a thing for sale, in the style of the ships: flat shaded and outlined, nose along +z, centred and
 /// scaled to the same size. The missile and the escape pod are the ship models of the same names; the fuel tank, E.C.M.

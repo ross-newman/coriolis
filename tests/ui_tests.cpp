@@ -66,16 +66,16 @@ void QuitIsTheLastItemOnTheTitle() {
 
 void TheStationScreensAreAllDrawnAndDiffer() {
   Playing p;
-  Image shots[5] = {Image(480, 270), Image(480, 270), Image(480, 270), Image(480, 270), Image(480, 270)};
-  const Screen order[] = {Screen::kStatus, Screen::kMarket, Screen::kEquipment, Screen::kChart, Screen::kSystem};
-  for (int i = 0; i < 5; ++i) {
+  Image shots[6] = {Image(480, 270), Image(480, 270), Image(480, 270), Image(480, 270), Image(480, 270), Image(480, 270)};
+  const Screen order[] = {Screen::kStatus, Screen::kMarket, Screen::kEquipment, Screen::kShipyard, Screen::kChart, Screen::kSystem};
+  for (int i = 0; i < 6; ++i) {
     CHECK(p.ui.screen() == order[i]);
     p.ui.Draw(shots[i]);
     CHECK(LitAll(shots[i]) > 1500);
     p.ui.Key(UiKey::kNextTab);
   }
   CHECK(p.ui.screen() == Screen::kStatus);
-  for (int i = 1; i < 5; ++i) {
+  for (int i = 1; i < 6; ++i) {
     CHECK(!(shots[0] == shots[i]));
   }
   p.ui.Key(UiKey::kPrevTab);

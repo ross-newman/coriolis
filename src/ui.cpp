@@ -314,7 +314,8 @@ const Model& TitleModel() {
   return model;
 }
 
-const Screen kDockedScreens[] = {Screen::kStatus, Screen::kMarket, Screen::kEquipment, Screen::kChart, Screen::kSystem};
+const Screen kDockedScreens[] = {Screen::kStatus, Screen::kMarket, Screen::kEquipment, Screen::kShipyard, Screen::kChart,
+                                 Screen::kSystem};
 
 }  // namespace
 
@@ -352,7 +353,7 @@ void GameUi::CueKey(UiKey key) {
   if (flying) {
     return;
   }
-  const bool trading = screen_ == Screen::kMarket || screen_ == Screen::kEquipment;
+  const bool trading = screen_ == Screen::kMarket || screen_ == Screen::kEquipment || screen_ == Screen::kShipyard;
   switch (key) {
     case UiKey::kUp:
     case UiKey::kDown:
@@ -547,6 +548,7 @@ float GameUi::MusicLevel() const {
     case Screen::kStatus:
     case Screen::kMarket:
     case Screen::kEquipment:
+    case Screen::kShipyard:
     case Screen::kChart:
     case Screen::kSystem:
       return paused_ ? 0.2f : 0.5f;
@@ -585,6 +587,7 @@ void GameUi::StartNewGame() {
   chart_open_ = false;
   market_row_ = 0;
   equipment_row_ = 0;
+  shipyard_row_ = 0;
   game_.TakeMessages();
   Say("Welcome to " + game_.system().name + ", Commander");
   Cue(SoundEffect::kTitleSting, 0.8f);
@@ -826,6 +829,18 @@ void GameUi::Key(UiKey key) {
       Say(fitted ? std::string("Fitted ") + ItemName(item)
                  : "Cannot buy: not for sale here, already fitted, or too dear");
     }
+  } else if (screen_ == Screen::kShipyard) {
+    const int rows = ShipForSaleCount();
+    if (key == UiKey::kUp) {
+      shipyard_row_ = (shipyard_row_ + rows - 1) % rows;
+    } else if (key == UiKey::kDown) {
+      shipyard_row_ = (shipyard_row_ + 1) % rows;
+    } else if (key == UiKey::kAccept) {
+      const bool bought = game_.BuyShip(shipyard_row_);
+      Cue(bought ? SoundEffect::kEquipmentFit : SoundEffect::kError, 0.8f);
+      Say(bought ? std::string("Bought the ") + ShipForSaleAt(shipyard_row_).name
+                 : "Cannot buy: not sold here, already yours, too dear, or the hold is too small for the cargo");
+    }
   } else if (screen_ == Screen::kChart || screen_ == Screen::kSystem) {
     if (key == UiKey::kUp) {
       MoveDestination(0, -1);
@@ -989,6 +1004,10 @@ void GameUi::DrawDocked(Image& image) {
       DrawEquipmentScreen(image, game_, equipment_row_, static_cast<float>(time_) * 0.8f);
       hint = "UP DOWN CHOOSE   ENTER BUY   TAB NEXT   L LAUNCH";
       break;
+    case Screen::kShipyard:
+      DrawShipyardScreen(image, game_, shipyard_row_, static_cast<float>(time_) * 0.8f);
+      hint = "UP DOWN CHOOSE   ENTER BUY (TRADES IN YOUR SHIP)   TAB NEXT   L LAUNCH";
+      break;
     case Screen::kChart:
       DrawChartScreen(image, game_);
       hint = "ARROWS CHOOSE A DESTINATION   BACKSPACE CLEAR   TAB NEXT   L LAUNCH";
@@ -1028,6 +1047,7 @@ void GameUi::DrawHelp(Image& image) {
       {"Y  N", "FLIGHT ASSIST, CLASSIC OR NEWTONIAN"},
       {"K", "DOCKING COMPUTER"},
       {"G  H", "GALACTIC CHART, HYPERSPACE"},
+      {"J", "GALACTIC HYPERDRIVE: JUMP TO THE NEXT GALAXY"},
       {"1 2 3 4", "FRONT, REAR, LEFT, RIGHT VIEW"},
       {"R  ,  .", "REAR, LEFT, RIGHT VIEW (AGAIN TO LOOK BACK)"},
       {"BACKSPACE (HOLD)", "ESCAPE POD"},

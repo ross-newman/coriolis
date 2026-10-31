@@ -6,7 +6,7 @@
 //
 // Keys:  flight    arrows pitch and roll (Q E also roll), A D yaw, W S throttle, X full throttle, Z throttle off,
 //                  hold Shift for fine control, Space lasers, T lock missile, M fire missile, Tab and Shift+Tab
-//                  next and previous target, C ECM, B energy bomb, H hyperspace, K docking computer,
+//                  next and previous target, C ECM, B energy bomb, H hyperspace, J galactic hyperdrive, K docking computer,
 //                  Y flight assist, N classic or Newtonian flight, 1 2 3 4 views, G galactic chart, P or Esc
 //                  pause, F1 the list of keys, hold Backspace to eject in the escape pod
 //        station   Tab next screen, arrows and Enter to choose and buy, Backspace sell, L launch, S save, Esc menu
@@ -459,6 +459,9 @@ int main(int argc, char** argv) {
               break;
             case SDLK_h:
               Set(&keys_pressed, Action::kHyperspace, true);
+              break;
+            case SDLK_j:
+              Set(&keys_pressed, Action::kGalacticHyperspace, true);
               break;
             case SDLK_k:
               Set(&keys_pressed, Action::kDockingComputer, true);

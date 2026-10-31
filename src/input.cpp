@@ -45,6 +45,8 @@ const char* ActionName(Action action) {
       return "full throttle";
     case Action::kThrottleZero:
       return "throttle off";
+    case Action::kGalacticHyperspace:
+      return "galactic hyperspace";
     case Action::kCount:
       break;
   }

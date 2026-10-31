@@ -1444,6 +1444,138 @@ void HyperspaceNeedsFuelDistanceAndClearSpace() {
   CHECK(!game.MassLocked());
 }
 
+void TheCargoBayAndTheGalacticHyperdriveAreBoughtAndSaved() {
+  Commander c = StartCommander();
+  c.credits = 10000000;
+  const int hold = c.cargo_capacity;
+  CHECK(!BuyItem(c, Item::kCargoBay, 4));
+  CHECK(BuyItem(c, Item::kCargoBay, 5));
+  CHECK(c.equipment.cargo_bay && c.cargo_capacity == hold + kCargoBayExtra);
+  CHECK(!BuyItem(c, Item::kCargoBay, 5));
+  CHECK(c.cargo_capacity == hold + kCargoBayExtra);
+  CHECK(!BuyItem(c, Item::kGalacticHyperdrive, 9));
+  CHECK(BuyItem(c, Item::kGalacticHyperdrive, 10));
+  CHECK(!BuyItem(c, Item::kGalacticHyperdrive, 10));
+
+  Json json;
+  std::string error;
+  const std::string text = CommanderToJson(c).Dump();
+  CHECK(Json::Parse(text, &json, &error));
+  Commander back;
+  CHECK(CommanderFromJson(json, &back, &error));
+  CHECK(back.equipment.cargo_bay && back.equipment.galactic_hyperdrive && back.cargo_capacity == c.cargo_capacity);
+
+  // A save from before these existed still loads, without them
+  std::string old = text;
+  const std::size_t from = old.find("\"cargo_bay\"");
+  const std::size_t to = old.find("\"laser_level\"");
+  CHECK(from != std::string::npos && to != std::string::npos && from < to);
+  old.erase(from, to - from);
+  CHECK(Json::Parse(old, &json, &error));
+  Commander older;
+  CHECK(CommanderFromJson(json, &older, &error));
+  CHECK(!older.equipment.cargo_bay && !older.equipment.galactic_hyperdrive);
+}
+
+void AGalacticJumpGoesToTheNextGalaxyAndUsesTheDrive() {
+  Commander c = StartCommander();
+  c.equipment.galactic_hyperdrive = true;
+  Game game(c, 12);
+  game.Launch(false);
+  const StarSystem before = game.system();
+  const double fuel = game.commander().fuel;
+  // Beside the station the ship is mass locked
+  CHECK(!game.StartGalacticJump());
+  game.player()->position = Vec3d{0, 1.0e6, 0};
+  for (Entity& e : game.world().entities()) {
+    if (e.kind == EntityKind::kShip && !e.is_player) {
+      e.alive = false;
+      e.silent_removal = true;
+    }
+  }
+  game.world().Step(1.0 / 60.0);
+  CHECK(game.StartGalacticJump());
+  CHECK(game.galactic_jump());
+  game.CancelJump();
+  CHECK(!game.galactic_jump());
+  CHECK(game.commander().equipment.galactic_hyperdrive);
+  CHECK(game.StartGalacticJump());
+  for (int i = 0; i < 60 * 6 && game.commander().galaxy == 0; ++i) {
+    game.Update(FlightInput(), 1.0 / 60.0);
+  }
+  CHECK(game.commander().galaxy == 1);
+  CHECK(game.galaxy().number() == 1);
+  CHECK(!game.commander().equipment.galactic_hyperdrive);
+  CHECK(Near(game.commander().fuel, fuel, 1e-9));
+  CHECK(game.mode() == GameMode::kFlight);
+  CHECK(game.world().FindKind(EntityKind::kStation) != nullptr);
+  // It arrives near the same place on the chart
+  CHECK(std::abs(game.system().x - before.x) < 40 && std::abs(game.system().y - before.y) < 40);
+  // With no drive left there is no second jump
+  CHECK(!game.StartGalacticJump());
+}
+
+void ShipsAreBoughtWithTheTradeInOfTheOldOne() {
+  Commander c = StartCommander();
+  CHECK(c.ship == "cobra_mk3_trader");
+  CHECK(FindShipForSale(c.ship) != nullptr);
+  const int trade_in = TradeInValue(c);
+  CHECK(trade_in > 0 && trade_in < FindShipForSale(c.ship)->price);
+  int python = -1;
+  int adder = -1;
+  int cobra = -1;
+  for (int i = 0; i < ShipForSaleCount(); ++i) {
+    const std::string id = ShipForSaleAt(i).id;
+    python = id == "python" ? i : python;
+    adder = id == "adder" ? i : adder;
+    cobra = id == "cobra_mk3_trader" ? i : cobra;
+  }
+  CHECK(python >= 0 && adder >= 0 && cobra >= 0);
+  // Too poor, and the tech level is too low
+  c.credits = 1000;
+  CHECK(!BuyShip(c, python, 12));
+  c.credits = 10000000;
+  CHECK(!BuyShip(c, python, 9));
+  CHECK(!BuyShip(c, ShipForSaleCount(), 15));
+  // The ship already flown cannot be bought
+  CHECK(!BuyShip(c, cobra, 15));
+  // The cargo has to fit: a full hold will not go into the adder
+  c.cargo[0] = c.cargo_capacity;
+  CHECK(!BuyShip(c, adder, 15));
+  CHECK(c.ship == "cobra_mk3_trader" && c.credits == 10000000);
+  c.cargo[0] = 0;
+  c.equipment.ecm = true;
+  c.missiles = 3;
+  const std::int64_t cash = c.credits;
+  CHECK(BuyShip(c, python, 15));
+  CHECK(c.ship == "python");
+  CHECK(c.credits == cash - (ShipForSaleAt(python).price - trade_in));
+  CHECK(c.cargo_capacity == ShipForSaleAt(python).hold);
+  CHECK(c.equipment.ecm && c.missiles == 3);
+  // With the extra bay fitted the hold has it on top
+  c.equipment.cargo_bay = true;
+  CHECK(BuyShip(c, adder, 15));
+  CHECK(c.cargo_capacity == ShipForSaleAt(adder).hold + kCargoBayExtra);
+
+  // Only in the station, and the new ship is the one that launches
+  Commander d = StartCommander();
+  d.credits = 10000000;
+  const Galaxy galaxy(d.galaxy);
+  for (const StarSystem& s : galaxy.systems()) {
+    if (s.tech_level >= 12) {
+      d.system = s.index;
+      break;
+    }
+  }
+  Game game(d, 13);
+  CHECK(game.system().tech_level >= 12);
+  CHECK(game.BuyShip(python));
+  CHECK(game.Launch(false));
+  CHECK(game.commander().ship == "python");
+  CHECK(game.player() != nullptr);
+  CHECK(!game.BuyShip(adder));
+}
+
 void SettingsOfFlightFromInput() {
   Game game(StartCommander(), 11);
   game.Launch(false);
@@ -1911,6 +2043,9 @@ int main() {
   AttackingTheStationBringsThePolice();
   DeathEndsTheGameUnlessThereIsAPod();
   HyperspaceNeedsFuelDistanceAndClearSpace();
+  TheCargoBayAndTheGalacticHyperdriveAreBoughtAndSaved();
+  AGalacticJumpGoesToTheNextGalaxyAndUsesTheDrive();
+  ShipsAreBoughtWithTheTradeInOfTheOldOne();
   SettingsOfFlightFromInput();
   MissileLockAndFire();
   FuelScoopingAndCanisters();

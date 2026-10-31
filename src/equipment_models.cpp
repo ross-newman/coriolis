@@ -189,6 +189,44 @@ Model BuildMilitaryLaser() {
   return b.Finish(3.2f);
 }
 
+/// The extra cargo bay: a steel pallet with brown crates stacked on it
+Model BuildCargoBay() {
+  ModelBuilder b("EXTRA CARGO BAY");
+  const Rgb steel{112, 120, 136};
+  const Rgb dark{54, 58, 70};
+  const Rgb crate{170, 124, 66};
+  const Rgb crate_dark{110, 78, 40};
+  const Rgb band{226, 196, 90};
+  b.Box(-42.0f, -30.0f, -30.0f, 42.0f, -24.0f, 30.0f, steel, dark, false);
+  b.Box(-38.0f, -24.0f, -26.0f, -4.0f, 4.0f, 2.0f, crate, crate_dark, false);
+  b.Box(4.0f, -24.0f, -26.0f, 38.0f, -2.0f, 2.0f, crate, crate_dark, false);
+  b.Box(-22.0f, -24.0f, 6.0f, 18.0f, 0.0f, 28.0f, crate, crate_dark, false);
+  b.Box(-32.0f, 4.0f, -22.0f, -10.0f, 22.0f, -2.0f, crate, crate_dark, false);
+  b.Box(-38.5f, -2.0f, -26.5f, -3.5f, 1.0f, 2.5f, band, band, false);
+  return b.Finish(3.2f);
+}
+
+/// The galactic hyperdrive: a thick gold ring with a dark throat, on a bracket
+Model BuildGalacticHyperdrive() {
+  ModelBuilder b("GALACTIC HYPERDRIVE");
+  const Rgb steel{150, 154, 166};
+  const Rgb shade{104, 110, 128};
+  const Rgb gold{236, 200, 84};
+  const Rgb throat{40, 120, 255};
+  const Rgb dark{40, 44, 56};
+  b.Centre(0.0f, 4.0f, 0.0f);
+  const Ring back_outer = b.Ring(16, 34.0f, 34.0f, -10.0f, kPi / 16.0f);
+  const Ring front_outer = b.Ring(16, 34.0f, 34.0f, 10.0f, kPi / 16.0f);
+  const Ring front_inner = b.Ring(16, 20.0f, 20.0f, 10.0f, kPi / 16.0f);
+  const Ring back_inner = b.Ring(16, 20.0f, 20.0f, -10.0f, kPi / 16.0f);
+  b.Band(back_outer, front_outer, {steel, shade});
+  b.Band(front_outer, front_inner, {gold});
+  b.Band(front_inner, back_inner, {throat});
+  b.Band(back_inner, back_outer, {shade});
+  b.Box(-10.0f, -46.0f, -14.0f, 10.0f, -30.0f, 14.0f, dark, dark, false);
+  return b.Finish(3.2f);
+}
+
 /// The models, in Item order
 std::vector<Model> BuildAllItemModels() {
   std::vector<Model> items;
@@ -201,6 +239,8 @@ std::vector<Model> BuildAllItemModels() {
   items.push_back(BuildBeamLaser());             // kBeamLaser
   items.push_back(BuildMilitaryLaser());         // kMilitaryLaser
   items.push_back(BuildFuel());                  // kFuel
+  items.push_back(BuildCargoBay());              // kCargoBay
+  items.push_back(BuildGalacticHyperdrive());    // kGalacticHyperdrive
   return items;
 }
 

@@ -20,6 +20,10 @@ void DrawMarketScreen(Image& image, const Game& game, int selected, float angle 
 /// highlighted item is drawn in 3D, turned by `angle` radians.
 void DrawEquipmentScreen(Image& image, const Game& game, int selected, float angle = 2.4f);
 
+/// The shipyard: the ships for sale with their holds and what they cost after the trade-in of the commander's ship.
+/// `selected` is the highlighted row, drawn in 3D below the list.
+void DrawShipyardScreen(Image& image, const Game& game, int selected, float angle = 2.4f);
+
 /// The galactic chart: every system in the galaxy, the one the ship is at, the range of the fuel and the chosen
 /// destination, with the data on the chosen system below
 void DrawChartScreen(Image& image, const Game& game);

@@ -125,6 +125,10 @@ bool Game::BuyItem(Item item) {
   return mode_ == GameMode::kDocked && coriolis::BuyItem(commander_, item, system().tech_level);
 }
 
+bool Game::BuyShip(int index) {
+  return mode_ == GameMode::kDocked && coriolis::BuyShip(commander_, index, system().tech_level);
+}
+
 void Game::SpawnPlayer(const Vec3d& position, const Quat& orientation, double speed) {
   const Blueprint* bp = FindBuiltInBlueprint(commander_.ship);
   if (bp == nullptr) {
@@ -476,7 +480,26 @@ bool Game::StartJump() {
     return false;
   }
   jump_timer_ = kJumpCountdown;
+  galactic_jump_ = false;
   Say("Hyperspace in " + std::to_string(static_cast<int>(kJumpCountdown)) + " seconds");
+  return true;
+}
+
+bool Game::StartGalacticJump() {
+  if (mode_ != GameMode::kFlight || player() == nullptr) {
+    return false;
+  }
+  if (!commander_.equipment.galactic_hyperdrive) {
+    Say("No galactic hyperdrive fitted");
+    return false;
+  }
+  if (MassLocked()) {
+    Say("Mass locked: get clear of the station and other ships");
+    return false;
+  }
+  jump_timer_ = kJumpCountdown;
+  galactic_jump_ = true;
+  Say("Galactic hyperspace in " + std::to_string(static_cast<int>(kJumpCountdown)) + " seconds");
   return true;
 }
 
@@ -484,6 +507,29 @@ void Game::Jump() {
   jump_timer_ = -1.0;
   if (MassLocked()) {
     Say("Jump aborted: mass locked");
+    return;
+  }
+  if (galactic_jump_) {
+    galactic_jump_ = false;
+    if (!commander_.equipment.galactic_hyperdrive) {
+      Say("Jump aborted: no galactic hyperdrive");
+      return;
+    }
+    // The next galaxy lies over the same part of the chart, so arrive at the system nearest where the ship was
+    const int x = system().x;
+    const int y = system().y;
+    commander_.equipment.galactic_hyperdrive = false;
+    commander_.galaxy = (commander_.galaxy + 1) % kGalaxyCount;
+    galaxy_ = Galaxy(commander_.galaxy);
+    commander_.system = galaxy_.Nearest(x, y);
+    selected_system_ = -1;
+    commander_.legal_status /= 2;
+    ++commander_.market_mood;
+    RefreshMarket();
+    autopilot_ = false;
+    BuildSystemWorld(true);
+    arrival_clock_ = kWarpSeconds;
+    Say("Arrived in galaxy " + std::to_string(commander_.galaxy + 1) + " at " + system().name);
     return;
   }
   const double distance = galaxy_.DistanceLy(commander_.system, selected_system_);
@@ -652,6 +698,14 @@ void Game::ApplyInput(const FlightInput& input, double dt) {
       Say("Hyperspace cancelled");
     } else {
       StartJump();
+    }
+  }
+  if (input.Pressed(Action::kGalacticHyperspace)) {
+    if (jump_timer_ > 0.0) {
+      CancelJump();
+      Say("Hyperspace cancelled");
+    } else {
+      StartGalacticJump();
     }
   }
 

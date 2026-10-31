@@ -79,6 +79,8 @@ enum class Action {
   /// Throttle straight to full, or straight to zero
   kThrottleFull,
   kThrottleZero,
+  /// Jump to the next galaxy (needs the galactic hyperdrive)
+  kGalacticHyperspace,
   kCount
 };
 

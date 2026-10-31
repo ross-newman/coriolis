@@ -64,6 +64,8 @@ class Game {
   bool Buy(Commodity item, int quantity);
   bool Sell(Commodity item, int quantity);
   bool BuyItem(Item item);
+  /// Buy a ship from the yard (see `coriolis::BuyShip`), trading in the one flown. Only in the station.
+  bool BuyShip(int index);
 
   // Flight
   /// Advance by `seconds` (the game steps at a fixed 60 Hz inside) with the player's input
@@ -83,6 +85,11 @@ class Game {
   /// Begin the hyperspace countdown for the chosen system. False, with a message, if there is not the fuel, it is too
   /// far, or the ship is mass locked by something nearby.
   bool StartJump();
+  /// Begin the countdown for the jump to the next galaxy, which uses up the galactic hyperdrive and no fuel. False, with a
+  /// message, if there is no hyperdrive or the ship is mass locked.
+  bool StartGalacticJump();
+  /// Is the countdown running for a jump to the next galaxy?
+  bool galactic_jump() const { return galactic_jump_ && jump_timer_ > 0.0; }
   void CancelJump() { jump_timer_ = -1.0; }
   /// Seconds left on the countdown, or a negative number when not jumping
   double jump_countdown() const { return jump_timer_; }
@@ -139,6 +146,7 @@ class Game {
   EntityId lock_ = kNoEntity;
   int selected_system_ = -1;
   double jump_timer_ = -1.0;
+  bool galactic_jump_ = false;
   /// Seconds left of the zoom back out after a jump, or negative
   double arrival_clock_ = -1.0;
   /// No pirates, hunters or aliens until the commander has docked once

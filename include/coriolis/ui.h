@@ -38,7 +38,7 @@ enum class UiKey {
 };
 
 /// Which screen is showing
-enum class Screen { kTitle, kStatus, kMarket, kEquipment, kChart, kSystem, kFlight, kDead };
+enum class Screen { kTitle, kStatus, kMarket, kEquipment, kShipyard, kChart, kSystem, kFlight, kDead };
 
 /// The whole game as a player sees it, without a window: the title screen, the screens of the station (status, market,
 /// equipment, galactic chart, data on a system), the flight view, the pause menu and the end screen. It owns the game
@@ -124,6 +124,7 @@ class GameUi {
   int pause_row_ = 0;
   int market_row_ = 0;
   int equipment_row_ = 0;
+  int shipyard_row_ = 0;
   int dead_row_ = 0;
   /// Seconds since the player died
   double dead_age_ = 0.0;

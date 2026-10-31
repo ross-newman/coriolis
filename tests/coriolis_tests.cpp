@@ -104,7 +104,7 @@ void EveryShipDrawsAndTheyDiffer() {
 
 void EveryThingForSaleHasAModel() {
   CHECK(AllItemModels().size() == kItemCount);
-  CHECK(static_cast<std::size_t>(Item::kFuel) + 1 == kItemCount);
+  CHECK(static_cast<std::size_t>(Item::kGalacticHyperdrive) + 1 == kItemCount);
   // The missile and the escape pod are the ships of the same name
   CHECK(GetItemModel(Item::kMissile).name == GetShip(ShipId::kMissile).name);
   CHECK(GetItemModel(Item::kEscapePod).name == GetShip(ShipId::kEscapePod).name);

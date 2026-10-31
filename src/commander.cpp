@@ -86,6 +86,10 @@ int ItemPrice(Item item) {
       return 10000;
     case Item::kMilitaryLaser:
       return 60000;
+    case Item::kCargoBay:
+      return 4000;
+    case Item::kGalacticHyperdrive:
+      return 50000;
     case Item::kFuel:
       return 20;
   }
@@ -102,12 +106,15 @@ int ItemTechLevel(Item item) {
       return 3;
     case Item::kFuelScoop:
       return 5;
+    case Item::kCargoBay:
+      return 5;
     case Item::kEnergyBomb:
     case Item::kBeamLaser:
       return 7;
     case Item::kDockingComputer:
       return 9;
     case Item::kMilitaryLaser:
+    case Item::kGalacticHyperdrive:
       return 10;
   }
   return 1;
@@ -131,6 +138,10 @@ const char* ItemName(Item item) {
       return "Beam laser";
     case Item::kMilitaryLaser:
       return "Military laser";
+    case Item::kCargoBay:
+      return "Extra cargo bay";
+    case Item::kGalacticHyperdrive:
+      return "Galactic hyperdrive";
     case Item::kFuel:
       return "Fuel";
   }
@@ -201,6 +212,19 @@ bool BuyItem(Commander& c, Item item, int system_tech_level) {
       }
       c.equipment.laser_level = 2;
       return true;
+    case Item::kCargoBay:
+      if (c.equipment.cargo_bay || !pay()) {
+        return false;
+      }
+      c.equipment.cargo_bay = true;
+      c.cargo_capacity += kCargoBayExtra;
+      return true;
+    case Item::kGalacticHyperdrive:
+      if (c.equipment.galactic_hyperdrive || !pay()) {
+        return false;
+      }
+      c.equipment.galactic_hyperdrive = true;
+      return true;
     case Item::kFuel: {
       // Fill the tank in tenths of a light year, as far as the money goes
       const int tenths = static_cast<int>(std::floor((kMaxFuel - c.fuel) * 10.0 + 1e-9));
@@ -215,6 +239,60 @@ bool BuyItem(Commander& c, Item item, int system_tech_level) {
     }
   }
   return false;
+}
+
+namespace {
+
+// id, name, price in tenths of a credit, hold in tonnes, tech level of the system that sells it
+const ShipForSale kShipsForSale[] = {
+    {"adder", "ADDER", 40000, 15, 3},
+    {"cobra_mk1", "COBRA MK I", 60000, 18, 4},
+    {"cobra_mk3_trader", "COBRA MK III", 100000, 20, 5},
+    {"asp_mk2", "ASP MK II", 220000, 25, 8},
+    {"transporter", "TRANSPORTER", 300000, 50, 8},
+    {"python", "PYTHON", 450000, 60, 10},
+    {"anaconda", "ANACONDA", 800000, 100, 12},
+};
+
+constexpr int kTradeInPercent = 60;
+
+}  // namespace
+
+int ShipForSaleCount() { return static_cast<int>(sizeof(kShipsForSale) / sizeof(kShipsForSale[0])); }
+
+const ShipForSale& ShipForSaleAt(int index) { return kShipsForSale[std::clamp(index, 0, ShipForSaleCount() - 1)]; }
+
+const ShipForSale* FindShipForSale(const std::string& id) {
+  for (const ShipForSale& s : kShipsForSale) {
+    if (id == s.id) {
+      return &s;
+    }
+  }
+  return nullptr;
+}
+
+int TradeInValue(const Commander& c) {
+  const ShipForSale* mine = FindShipForSale(c.ship);
+  return mine == nullptr ? 0 : mine->price * kTradeInPercent / 100;
+}
+
+bool BuyShip(Commander& c, int index, int system_tech_level) {
+  if (index < 0 || index >= ShipForSaleCount()) {
+    return false;
+  }
+  const ShipForSale& ship = kShipsForSale[index];
+  if (system_tech_level < ship.tech_level || c.ship == ship.id) {
+    return false;
+  }
+  const std::int64_t cost = static_cast<std::int64_t>(ship.price) - TradeInValue(c);
+  const int hold = ship.hold + (c.equipment.cargo_bay ? kCargoBayExtra : 0);
+  if (c.credits < cost || CargoUsed(c) > hold) {
+    return false;
+  }
+  c.credits -= cost;
+  c.ship = ship.id;
+  c.cargo_capacity = hold;
+  return true;
 }
 
 Json CommanderToJson(const Commander& c) {
@@ -239,6 +317,8 @@ Json CommanderToJson(const Commander& c) {
   eq.Set("docking_computer", Json::Bool(c.equipment.docking_computer));
   eq.Set("energy_bomb", Json::Bool(c.equipment.energy_bomb));
   eq.Set("escape_pod", Json::Bool(c.equipment.escape_pod));
+  eq.Set("cargo_bay", Json::Bool(c.equipment.cargo_bay));
+  eq.Set("galactic_hyperdrive", Json::Bool(c.equipment.galactic_hyperdrive));
   eq.Set("laser_level", Json::Number(c.equipment.laser_level));
   root.Set("equipment", std::move(eq));
   root.Set("legal_status", Json::Number(c.legal_status));
@@ -273,6 +353,15 @@ bool GetFlag(const Json& j, const char* key, bool* out, std::string* error) {
   }
   *out = m->bool_value();
   return true;
+}
+
+/// A flag that older saves do not have: missing means false, but if it is there it has to be true or false
+bool GetOptionalFlag(const Json& j, const char* key, bool* out, std::string* error) {
+  if (j.Find(key) == nullptr) {
+    *out = false;
+    return true;
+  }
+  return GetFlag(j, key, out, error);
 }
 
 }  // namespace
@@ -331,7 +420,9 @@ bool CommanderFromJson(const Json& json, Commander* out, std::string* error) {
   if (!GetFlag(*eq, "ecm", &c.equipment.ecm, error) || !GetFlag(*eq, "fuel_scoop", &c.equipment.fuel_scoop, error) ||
       !GetFlag(*eq, "docking_computer", &c.equipment.docking_computer, error) ||
       !GetFlag(*eq, "energy_bomb", &c.equipment.energy_bomb, error) ||
-      !GetFlag(*eq, "escape_pod", &c.equipment.escape_pod, error)) {
+      !GetFlag(*eq, "escape_pod", &c.equipment.escape_pod, error) ||
+      !GetOptionalFlag(*eq, "cargo_bay", &c.equipment.cargo_bay, error) ||
+      !GetOptionalFlag(*eq, "galactic_hyperdrive", &c.equipment.galactic_hyperdrive, error)) {
     return false;
   }
   *out = c;

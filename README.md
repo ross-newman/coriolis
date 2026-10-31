@@ -8,7 +8,7 @@ The start of an open source version of the space trading game Elite.
 
 This is a **playable game**, a **game engine** and a **ship rendering engine**. The game engine plays the whole of the
 Elite loop: flight, laser and missile combat with AI pilots, traffic, stations and docking, eight galaxies of 256
-systems each with hyperspace between the systems, markets and trading, equipment, legal status, combat rank and saving. A computer pilot plays
+systems each with hyperspace between the systems and a galactic hyperdrive to the next galaxy, markets and trading, equipment, ships, legal status, combat rank and saving. A computer pilot plays
 it from end to end in the tests. In front of it is a software rendered 3D cockpit (a clear view out of the ship with a
 console of computer screens along the bottom fifth), the screens of the station, and a window with keyboard and Xbox
 controller support (needs SDL2), and FM synthesized sound effects. What it does not have yet is missions. The rendering engine draws solid,
@@ -48,7 +48,7 @@ and published by GitHub Actions on every push to `main`; the pictures and pages 
 | Game engine | `include/coriolis/game.h` and others | See [The game engine](#the-game-engine) |
 | Engine demo | `apps/engine_demo` | A computer pilot plays the game and prints what happens |
 | Cockpit | `cockpit.h`, `src/cockpit.cpp` | The flight view: a clear view out of the ship (stars, planet and sun, solid ships and stations, bolts, explosions, target brackets) over the top four fifths, and a 3D console in the bottom fifth with a ship systems screen, a 3D scanner and a navigation screen, painted in the colours of the player's ship |
-| Screens | `screens.h` | The station screens: status, market, equipment (with a 3D model of the item), galactic chart, data on a system |
+| Screens | `screens.h` | The station screens: status, market, equipment (with a 3D model of the item), shipyard, galactic chart, data on a system |
 | Game UI | `ui.h`, `src/ui.cpp` | The title, the station screens with buying and selling, the chart, flight, pause and saving, with no window so it can be tested |
 | Flight view | `apps/flight_view` | The computer pilot plays and the cockpit and screens are saved as PNG files |
 | The game | `apps/play` | The game in a window (SDL2): `coriolis_game` |
@@ -103,6 +103,7 @@ the saved game.
 | Tab / Shift+Tab | Next and previous target |
 | C / B | ECM / energy bomb |
 | H | Hyperspace (choose a system on the chart with G first) |
+| J | Galactic hyperdrive: jump to the next galaxy (uses up the drive, no fuel) |
 | K / Y / N | Docking computer / flight assist / classic or Newtonian flight |
 | 1 2 3 4 | Front, rear, left and right views |
 | G | Galactic chart (the game waits while it is open) |
@@ -386,5 +387,4 @@ released here under the MIT licence.
 ## What is not done yet
 
 - More music: there is the station theme, but none for the title, a fight or a jump
-- Missions and a story, galactic hyperspace between galaxies, more equipment and ship purchases
-- Choosing a licence
+- Missions and a story

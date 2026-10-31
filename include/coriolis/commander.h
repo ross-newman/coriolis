@@ -16,6 +16,10 @@ struct Equipment {
   bool docking_computer = false;
   bool energy_bomb = false;
   bool escape_pod = false;
+  /// Adds `kCargoBayExtra` tonnes to the hold
+  bool cargo_bay = false;
+  /// Jumps to the next galaxy, once
+  bool galactic_hyperdrive = false;
   /// 0 pulse laser, 1 beam laser, 2 military laser
   int laser_level = 0;
 };
@@ -44,6 +48,8 @@ struct Commander {
 };
 
 constexpr double kMaxFuel = 7.0;
+/// Tonnes the extra cargo bay adds to the hold
+constexpr int kCargoBayExtra = 15;
 
 int CargoUsed(const Commander& c);
 int CargoFree(const Commander& c);
@@ -68,7 +74,9 @@ enum class Item {
   kEscapePod,
   kBeamLaser,
   kMilitaryLaser,
-  kFuel
+  kFuel,
+  kCargoBay,
+  kGalacticHyperdrive
 };
 
 /// What an item costs in tenths of a credit (for fuel, per light year), and the tech level a system needs to sell it
@@ -78,6 +86,25 @@ const char* ItemName(Item item);
 /// Buy an item (fuel: fill the tank as far as money allows). False if it is not for sale here, is already owned or
 /// cannot be afforded.
 bool BuyItem(Commander& c, Item item, int system_tech_level);
+
+/// A ship the shipyard sells. `hold` is its cargo space in tonnes, `price` is in tenths of a credit.
+struct ShipForSale {
+  const char* id;
+  const char* name;
+  int price;
+  int hold;
+  int tech_level;
+};
+int ShipForSaleCount();
+const ShipForSale& ShipForSaleAt(int index);
+/// The entry for a ship id, or nullptr if the shipyard does not deal in it
+const ShipForSale* FindShipForSale(const std::string& id);
+/// What the yard gives for the commander's ship in part exchange, in tenths of a credit
+int TradeInValue(const Commander& c);
+/// Swap the commander's ship for one in the yard, paying the price less the trade-in. Equipment and missiles go across;
+/// the hold becomes the new ship's (plus the extra bay if fitted). False, changing nothing, if the yard is not at this
+/// tech level, it is the ship already flown, the money is short or the cargo would not fit.
+bool BuyShip(Commander& c, int index, int system_tech_level);
 
 Json CommanderToJson(const Commander& c);
 bool CommanderFromJson(const Json& json, Commander* out, std::string* error);
