@@ -82,6 +82,14 @@ To make one yourself, build with SDL2 installed and run `cpack` in the build dir
 puts the release in the file name). The packages are built by `.github/workflows/deb.yml`, and pushing a tag such as
 `v0.2.0` attaches them to a GitHub release.
 
+For Windows, each release has an installer, `coriolis-VERSION-windows-x64.exe`: it puts the game and the DLLs it needs
+(SDL2 and the MinGW-w64 runtime) in Program Files, with a Start menu entry, a desktop shortcut and an uninstaller. Run it
+and start Coriolis from the Start menu, or install it silently with `coriolis-VERSION-windows-x64.exe /S`. To make one
+yourself, build with MSYS2 (MinGW-w64 gcc, CMake 3.21 or later, Ninja, SDL2 and NSIS installed: `pacman -S
+mingw-w64-x86_64-{gcc,cmake,ninja,SDL2,nsis}`) and run `cpack -G NSIS` in the build directory. The installer is built,
+tested, installed silently and started by `.github/workflows/windows.yml`, and pushing a tag attaches it to the release.
+The game saves to `.coriolis_save.json` in your user folder (`%USERPROFILE%`).
+
 ## Playing
 
 With SDL2 installed (`libsdl2-dev`) the build makes `coriolis_game`:
