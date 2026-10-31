@@ -64,6 +64,17 @@ cmake --build build -j
 ctest --test-dir build
 ```
 
+Each release has a `.deb` of the game for Ubuntu 24.04 and one for Ubuntu 26.04 (pick the one for your release):
+
+```bash
+sudo apt install ./coriolis_0.1.0-1_ubuntu24.04_amd64.deb
+coriolis_game
+```
+
+To make one yourself, build with SDL2 installed and run `cpack` in the build directory (`-DCORIOLIS_DISTRO=ubuntu24.04`
+puts the release in the file name). The packages are built by `.github/workflows/deb.yml`, and pushing a tag such as
+`v0.2.0` attaches them to a GitHub release.
+
 ## Playing
 
 With SDL2 installed (`libsdl2-dev`) the build makes `coriolis_game`:

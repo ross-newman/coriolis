@@ -125,3 +125,43 @@ if(CORIOLIS_BUILD_TESTS)
   target_link_libraries(coriolis_music_tests PRIVATE coriolis)
   add_test(NAME coriolis_music_tests COMMAND coriolis_music_tests)
 endif()
+
+# Installing and packaging: `cpack -G DEB` in the build directory makes a .deb of the game (needs SDL2, so that
+# coriolis_game is built). CORIOLIS_DISTRO names the distribution it was built on, for the file name, and
+# CORIOLIS_PACKAGE_VERSION overrides the version (the release workflow sets it from the tag).
+if(TARGET coriolis_game)
+  include(GNUInstallDirs)
+  install(TARGETS coriolis_game RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(FILES packaging/coriolis.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+  install(FILES packaging/coriolis.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps)
+  install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+  set(CORIOLIS_PACKAGE_VERSION "${PROJECT_VERSION}" CACHE STRING "Version of the package")
+  set(CORIOLIS_DISTRO "" CACHE STRING "Distribution the package is built for, such as ubuntu24.04")
+  execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CORIOLIS_DEB_ARCH
+                  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(NOT CORIOLIS_DEB_ARCH)
+    set(CORIOLIS_DEB_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+  endif()
+
+  set(CPACK_PACKAGE_NAME "coriolis")
+  set(CPACK_PACKAGE_VERSION "${CORIOLIS_PACKAGE_VERSION}")
+  set(CPACK_PACKAGE_CONTACT "Ross Newman <37403843+ross-newman@users.noreply.github.com>")
+  set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/ross-newman/coriolis")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Open source space trading and dogfighting game inspired by Elite")
+  set(CPACK_PACKAGE_DESCRIPTION
+      "A playable space trading and dogfighting game: flight, combat with AI pilots, stations and docking, hyperspace, markets and trading, with a software rendered 3D cockpit, FM synthesized sound and music.")
+  set(CPACK_GENERATOR "DEB")
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+  set(CPACK_STRIP_FILES ON)
+  set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+  set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+  set(CPACK_DEBIAN_PACKAGE_RELEASE "1")
+  if(CORIOLIS_DISTRO)
+    set(CPACK_DEBIAN_FILE_NAME
+        "coriolis_${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}_${CORIOLIS_DISTRO}_${CORIOLIS_DEB_ARCH}.deb")
+  else()
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+  endif()
+  include(CPack)
+endif()

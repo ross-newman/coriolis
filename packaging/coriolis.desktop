@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Coriolis
+GenericName=Space trading and dogfight game
+Comment=An open source space trading and dogfighting game inspired by Elite
+Exec=coriolis_game
+Icon=coriolis
+Terminal=false
+Categories=Game;ArcadeGame;
+Keywords=space;trading;elite;
