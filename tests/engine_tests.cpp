@@ -1038,6 +1038,20 @@ void EquipmentCostsAndNeedsTech() {
   CHECK(Near(c.fuel, 0.3, 1e-9));
   CHECK(c.credits == 0);
   CHECK(!BuyItem(c, Item::kFuel, 1));
+  // A crumb of a tenth missing (the fuel scoop leaves them) can still be topped up, at a tenth's price; a tank within
+  // a millionth of full is full
+  c.fuel = kMaxFuel - 0.03;
+  c.credits = 1000;
+  CHECK(BuyItem(c, Item::kFuel, 1));
+  CHECK(c.fuel == kMaxFuel);
+  CHECK(c.credits == 1000 - ItemPrice(Item::kFuel) / 10);
+  CHECK(!BuyItem(c, Item::kFuel, 1));
+  c.fuel = kMaxFuel - 1e-8;
+  CHECK(!BuyItem(c, Item::kFuel, 1));
+  // Not enough for the whole tenth: nothing is sold
+  c.fuel = kMaxFuel - 0.03;
+  c.credits = ItemPrice(Item::kFuel) / 10 - 1;
+  CHECK(!BuyItem(c, Item::kFuel, 1));
 }
 
 void RanksAndLawFollowTheNumbers() {

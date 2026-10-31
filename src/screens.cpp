@@ -128,7 +128,7 @@ bool Owned(const Commander& c, Item item) {
     case Item::kGalacticHyperdrive:
       return c.equipment.galactic_hyperdrive;
     case Item::kFuel:
-      return c.fuel >= kMaxFuel - 1e-9;
+      return c.fuel >= kMaxFuel - 1e-6;
   }
   return false;
 }

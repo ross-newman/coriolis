@@ -226,15 +226,20 @@ bool BuyItem(Commander& c, Item item, int system_tech_level) {
       c.equipment.galactic_hyperdrive = true;
       return true;
     case Item::kFuel: {
-      // Fill the tank in tenths of a light year, as far as the money goes
-      const int tenths = static_cast<int>(std::floor((kMaxFuel - c.fuel) * 10.0 + 1e-9));
+      // Fill the tank in tenths of a light year, as far as the money goes. A part of a tenth missing (the scoop and the
+      // jumps leave such crumbs) still takes a whole tenth's price, so the tank can always be topped up.
+      const double deficit = kMaxFuel - c.fuel;
+      if (deficit < 1e-6) {
+        return false;
+      }
+      const int tenths = static_cast<int>(std::ceil(deficit * 10.0 - 1e-6));
       const int affordable =
           static_cast<int>(std::min<std::int64_t>(tenths, c.credits / std::max<std::int64_t>(1, price / 10)));
       if (affordable <= 0) {
         return false;
       }
       c.credits -= static_cast<std::int64_t>(affordable) * (price / 10);
-      c.fuel = std::min(kMaxFuel, c.fuel + affordable / 10.0);
+      c.fuel = affordable >= tenths ? kMaxFuel : c.fuel + affordable / 10.0;
       return true;
     }
   }
