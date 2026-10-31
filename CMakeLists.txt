@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.16)
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CORIOLIS_VERSION_FROM_FILE LIMIT_COUNT 1)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
 project(coriolis VERSION ${CORIOLIS_VERSION_FROM_FILE} LANGUAGES CXX)
+if(WIN32)
+  enable_language(RC)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -106,6 +109,12 @@ if(CORIOLIS_USE_SDL2 AND CORIOLIS_BUILD_APPS)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       target_compile_options(coriolis_game PRIVATE -Wall -Wextra)
     endif()
+    if(WIN32)
+      # A window, not a console program, with the icon of the game
+      set_target_properties(coriolis_game PROPERTIES WIN32_EXECUTABLE ON)
+      target_sources(coriolis_game PRIVATE packaging/coriolis.rc)
+      target_include_directories(coriolis_game PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/packaging)
+    endif()
   else()
     message(STATUS "SDL2 not found: the game window (coriolis_game) is not built (install libsdl2-dev)")
   endif()
@@ -133,11 +142,12 @@ if(CORIOLIS_BUILD_TESTS)
   add_test(NAME coriolis_music_tests COMMAND coriolis_music_tests)
 endif()
 
-# Installing and packaging: `cpack -G DEB` in the build directory makes a .deb of the game (needs SDL2, so that
+# Installing and packaging: `cpack -G DEB` in the build directory makes a .deb of the game on Linux, and `cpack -G NSIS`
+# an installer on Windows (see below). Both need SDL2, so that
 # coriolis_game is built). CORIOLIS_DISTRO names the distribution it was built on, for the file name, and
 # the package version is in the VERSION file, and CORIOLIS_PACKAGE_VERSION overrides it (the release workflow sets it
 # from the tag).
-if(TARGET coriolis_game)
+if(TARGET coriolis_game AND NOT WIN32)
   include(GNUInstallDirs)
   install(TARGETS coriolis_game RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(FILES packaging/coriolis.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
@@ -177,5 +187,52 @@ if(TARGET coriolis_game)
   else()
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
   endif()
+  include(CPack)
+endif()
+
+# The Windows installer: `cpack -G NSIS` makes coriolis-VERSION-windows-x64.exe, which puts the game and the DLLs it
+# needs (SDL2 and the compiler's runtime, found by CMake) in Program Files, with a Start menu entry, a desktop shortcut
+# and an uninstaller. It needs NSIS (makensis) on the path. CORIOLIS_PACKAGE_VERSION overrides the version as above.
+if(TARGET coriolis_game AND WIN32)
+  if(CMAKE_VERSION VERSION_LESS 3.21)
+    message(FATAL_ERROR "The Windows installer needs CMake 3.21 or later (it finds the DLLs the game needs)")
+  endif()
+  set(CORIOLIS_PACKAGE_VERSION "" CACHE STRING "Version of the package, if not the one in the VERSION file")
+  if(NOT CORIOLIS_PACKAGE_VERSION)
+    set(CORIOLIS_PACKAGE_VERSION "${PROJECT_VERSION}")
+  endif()
+  get_filename_component(CORIOLIS_COMPILER_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+
+  install(TARGETS coriolis_game RUNTIME_DEPENDENCY_SET coriolis_runtime RUNTIME DESTINATION bin)
+  install(RUNTIME_DEPENDENCY_SET coriolis_runtime
+          PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+          POST_EXCLUDE_REGEXES ".*[/\\\\][Ss]ystem32[/\\\\].*" ".*[/\\\\][Ww]indows[/\\\\].*"
+          DIRECTORIES "${CORIOLIS_COMPILER_DIR}"
+          DESTINATION bin)
+  install(FILES README.md VERSION DESTINATION .)
+  install(FILES LICENSE DESTINATION . RENAME LICENSE.txt)
+
+  set(CPACK_GENERATOR "NSIS")
+  set(CPACK_PACKAGE_NAME "Coriolis")
+  set(CPACK_PACKAGE_VENDOR "Ross Newman")
+  set(CPACK_PACKAGE_VERSION "${CORIOLIS_PACKAGE_VERSION}")
+  set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/ross-newman/coriolis")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Open source space trading and dogfighting game inspired by Elite")
+  set(CPACK_PACKAGE_FILE_NAME "coriolis-${CPACK_PACKAGE_VERSION}-windows-x64")
+  set(CPACK_PACKAGE_INSTALL_DIRECTORY "Coriolis")
+  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+  set(CPACK_PACKAGE_EXECUTABLES "coriolis_game" "Coriolis")
+  set(CPACK_NSIS_DISPLAY_NAME "Coriolis")
+  set(CPACK_NSIS_PACKAGE_NAME "Coriolis")
+  set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
+  set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/coriolis.ico")
+  set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/coriolis.ico")
+  set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\coriolis_game.exe")
+  set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/ross-newman/coriolis")
+  set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+  set(CPACK_NSIS_MODIFY_PATH OFF)
+  set(CPACK_NSIS_CREATE_ICONS_EXTRA
+      "CreateShortCut '$DESKTOP\\Coriolis.lnk' '$INSTDIR\\bin\\coriolis_game.exe'")
+  set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$DESKTOP\\Coriolis.lnk'")
   include(CPack)
 endif()

@@ -12,6 +12,8 @@
 //        station   Tab next screen, arrows and Enter to choose and buy, Backspace sell, L launch, S save, Esc menu
 //        F11 or Alt+Enter full screen on and off, F2 sound on and off, F3 picture size (auto, 540, 720, 1080, native)
 
+// SDL would rename main on Windows and need its own startup library; we start it ourselves
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include <algorithm>
@@ -45,6 +47,11 @@ bool ParseSize(const char* text, int* w, int* h) {
 
 std::string DefaultSavePath() {
   const char* home = std::getenv("HOME");
+#ifdef _WIN32
+  if (home == nullptr) {
+    home = std::getenv("USERPROFILE");
+  }
+#endif
   return std::string(home != nullptr ? home : ".") + "/.coriolis_save.json";
 }
 
@@ -253,6 +260,7 @@ void Set(FlightInput* in, Action a, bool pressed, bool held = false) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  SDL_SetMainReady();
   std::uint64_t seed = static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
   int width = 1920;
   int height = 1080;
