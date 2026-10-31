@@ -7,16 +7,31 @@
 The start of an open source version of the space trading game Elite.
 
 This is a **playable game**, a **game engine** and a **ship rendering engine**. The game engine plays the whole of the
-Elite loop: flight, laser and missile combat with AI pilots, traffic, stations and docking, hyperspace between eight
-galaxies of 256 systems, markets and trading, equipment, legal status, combat rank and saving. A computer pilot plays
+Elite loop: flight, laser and missile combat with AI pilots, traffic, stations and docking, eight galaxies of 256
+systems each with hyperspace between the systems, markets and trading, equipment, legal status, combat rank and saving. A computer pilot plays
 it from end to end in the tests. In front of it is a software rendered 3D cockpit (a clear view out of the ship with a
 console of computer screens along the bottom fifth), the screens of the station, and a window with keyboard and Xbox
 controller support (needs SDL2), and FM synthesized sound effects. What it does not have yet is missions. The rendering engine draws solid,
-flat shaded 3D models of 36 ships, the 13 of the original game's first ship list and the further ships of its later
-versions, with a small software rasteriser into an RGB picture. It was extracted from the Elite test card of the
-[MediaX](https://github.com/Astute-Systems/MediaX) video library.
 
-![The 36 ships](docs/ships.png)
+flat shaded 3D models of 36 ships, the 13 of the original game's first ship list and the further ships of its later
+versions, with a small software rasteriser into an RGB picture.
+
+![Flying out of a station: targeted ships and the cockpit console](docs/img/flight/combat_pirates.webp)
+
+## Documentation
+
+The game guide, with pictures of every ship, station, upgrade, trade good and world, is at
+**https://ross-newman.github.io/coriolis/**:
+
+- [Playing](https://ross-newman.github.io/coriolis/playing/): controls, flying, docking, trading and fighting
+- [Ships](https://ross-newman.github.io/coriolis/ships/), [Stations](https://ross-newman.github.io/coriolis/stations/)
+  and [Worlds](https://ross-newman.github.io/coriolis/planets/)
+- [Upgrades](https://ross-newman.github.io/coriolis/upgrades/) and
+  [Trade goods](https://ross-newman.github.io/coriolis/trade-goods/)
+
+The rest of this page is for people who build, change or use the code. The site is built from `docs/` with MkDocs
+and published by GitHub Actions on every push to `main`; the pictures and pages are made by `site_gen`
+(`tools/make_site.sh`).
 
 ## What is here
 
@@ -283,7 +298,7 @@ All the sound is made by FM synthesis in the style of the AdLib sound card, with
 `AdLibSynth` (`adlib_synth.h`) starts from a port of the synthesizer in the Atlas project of Astute Systems, taken out
 of Qt so it has no dependencies. That gives the twelve effects of the original (fire, enemy hit, big hit, player hit,
 power up, wave complete, game over, menu select, menu move, alarm, explosion, shield). The rest of it is new, written
-for this game in `src/adlib_design.cpp`: 37 effects built from the sort of voice the AdLib's OPL2 chip had, two
+for this game in `src/adlib_design.cpp`: the other 40 effects, built from the sort of voice the AdLib's OPL2 chip had, two
 operators with a modulator that pushes the phase of a carrier, each with its own envelope. An effect is a few notes of
 such a voice, with a pitch that can sweep, layered with filtered noise, clicks and crackle. Each is scaled to a planned
 loudness so they sit right against each other.
