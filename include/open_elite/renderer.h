@@ -26,7 +26,8 @@ class Renderer {
   explicit Renderer(RenderOptions options = {}) : options_(options) {}
 
   /// Draw a ship turned by `angle` radians. A ship spins about the vertical axis with a slow nod and roll; a ship
-  /// with Spin::kRoll rolls about its own long axis instead, showing its front to the viewer.
+  /// with Spin::kRoll rolls about its own long axis instead, showing its front to the viewer; one with Spin::kSway
+  /// faces the viewer and swings from side to side.
   void DrawShip(Image& image, const Model& model, float angle) const;
 
  private:
@@ -37,10 +38,17 @@ class Renderer {
 /// frame always gives the same stars. The stars are added to what is in the image (brighter pixels win).
 void DrawStars(Image& image, std::uint32_t frame);
 
-/// Draw text in a 5x7 font at pixel position (x, y), each font pixel being `scale` pixels square. The font has the
-/// capital letters used in ship names (A B C D E G H I K L M N O P R S T U V W Y) and the space; any other
-/// character is drawn as a space.
+/// Draw text in a vector stroke font at pixel position (x, y). The font is drawn as smooth anti-aliased lines, so it is
+/// clean at any size: a character cell is 6*scale pixels wide and its capitals are 7*scale high. It has capitals,
+/// lower case, digits and the usual punctuation; any other character is drawn as a space.
 void DrawText(Image& image, const std::string& text, std::int64_t x, std::int64_t y, std::uint32_t scale, Rgb colour);
+
+/// Smooth anti-aliased lines, circles and discs in the same weight as the text, so graphics and text sit together: a
+/// line or ring at `scale` is as thick as the strokes of text at that scale. Positions are in pixels, and anything off
+/// the picture is clipped.
+void DrawLine(Image& image, float x0, float y0, float x1, float y1, std::uint32_t scale, Rgb colour);
+void DrawCircle(Image& image, float cx, float cy, float radius, std::uint32_t scale, Rgb colour);
+void DrawDisc(Image& image, float cx, float cy, float radius, Rgb colour);
 
 /// Draw text in the bottom left corner, sized to the height of the image
 void DrawCaption(Image& image, const std::string& text, Rgb colour = {120, 255, 160});

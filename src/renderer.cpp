@@ -27,9 +27,10 @@ void Renderer::DrawShip(Image& image, const Model& model, float angle) const {
   // Orientation: a steady spin with a slow nod and roll. A rolling ship spins about its own axis instead, showing
   // its front to the viewer.
   const bool roll_spin = model.spin == Spin::kRoll;
-  const float yaw_view = roll_spin ? kPi + 0.5f : angle;
-  const float pitch = roll_spin ? 0.25f : 0.42f + 0.12f * std::sin(angle * 0.5f);
-  const float roll = roll_spin ? 0.0f : 0.16f * std::sin(angle * 0.7f + 1.0f);
+  const bool sway = model.spin == Spin::kSway;
+  const float yaw_view = roll_spin ? kPi + 0.5f : (sway ? kPi + 0.7f * std::sin(angle * 0.9f) : angle);
+  const float pitch = roll_spin ? 0.25f : (sway ? 0.1f * std::sin(angle * 0.5f) : 0.42f + 0.12f * std::sin(angle * 0.5f));
+  const float roll = (roll_spin || sway) ? 0.0f : 0.16f * std::sin(angle * 0.7f + 1.0f);
   const float cos_y = std::cos(yaw_view);
   const float sin_y = std::sin(yaw_view);
   const float cos_p = std::cos(pitch);

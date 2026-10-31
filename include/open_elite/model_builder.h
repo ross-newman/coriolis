@@ -30,6 +30,9 @@ class ModelBuilder {
     return model_.vertices.size() - 1;
   }
 
+  /// Where a vertex made earlier is
+  Vec3 Position(std::size_t index) const { return model_.vertices[index]; }
+
   /// The centre of the mesh being built
   void Centre(float x, float y, float z) { centre_ = {x, y, z}; }
 

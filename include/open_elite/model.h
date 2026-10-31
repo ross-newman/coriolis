@@ -30,13 +30,17 @@ enum class Spin {
   /// Turn about the vertical axis
   kYaw,
   /// Roll about the ship's own long axis, as a space station does, showing its front to the viewer
-  kRoll
+  kRoll,
+  /// Face the viewer and swing gently from side to side, for a flat emblem
+  kSway
 };
 
 /// A ship: vertices and triangles
 struct Model {
   std::string name;
   Spin spin = Spin::kYaw;
+  /// How big the ship really is across, in metres, or 0 when not set. Models are all drawn at the same size.
+  float size_metres = 0.0f;
   std::vector<Vec3> vertices;
   std::vector<Face> faces;
 };
