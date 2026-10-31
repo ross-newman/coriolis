@@ -50,6 +50,8 @@ class Cockpit {
 
   /// Soft glow round the bright parts (default on)
   void set_bloom(bool on) { bloom_ = on; }
+  /// Soften the stair steps along edges (on by default; a supersampled picture does not need it)
+  void set_antialias(bool on) { antialias_ = on; }
 
   /// Gas clouds on the sky, made from the seed of the system (default on)
   void set_nebula(bool on) { nebula_on_ = on; }
@@ -68,6 +70,7 @@ class Cockpit {
   CockpitView view_ = CockpitView::kFront;
   int supersample_ = 1;
   bool bloom_ = true;
+  bool antialias_ = true;
   bool nebula_on_ = true;
   Vec3d sway_{0.0, 0.0, 0.0};
   std::unordered_map<const Blueprint*, Model> models_;

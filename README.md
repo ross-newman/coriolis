@@ -87,14 +87,18 @@ puts the release in the file name). The packages are built by `.github/workflows
 With SDL2 installed (`libsdl2-dev`) the build makes `coriolis_game`:
 
 ```bash
-./build/coriolis_game                      # 960x540, saves to ~/.coriolis_save.json
-./build/coriolis_game --size 1280x720 --quality 2 --fullscreen
+./build/coriolis_game                      # 1080 lines (less in a small window), saves to ~/.coriolis_save.json
+./build/coriolis_game --size native --fullscreen   # one picture pixel to each screen pixel
+./build/coriolis_game --size 1280x720 --quality 2  # a fixed height, drawn bigger and shrunk for smooth edges
 ./build/coriolis_game --no-save --seed 7   # no saving, the same galaxy of traffic
 ```
 
-`--size` is the size the game is drawn at (it is scaled to the window), `--quality 1-4` draws that many times bigger and
-shrinks for smooth edges (slower), and `--invert-pitch` swaps the pitch keys. Quality 1 runs at 60 frames a second at
-960x540 on one core. The game saves when you dock and when you press S in the station, and the title offers to continue
+`--size` is how big the picture is drawn. `auto`, the default, starts at 1080 lines (never more than the window has pixels, so a small window
+is drawn smaller), steps down when frames are slow and tries going back up when they are quick; `native` is one picture pixel to each screen pixel; `WxH` is a fixed height (the width follows the shape of the
+window). F3 goes through auto, 540, 720, 1080 and native, and the window title says which. The picture is drawn by the
+CPU, in bands of rows on all of the cores (up to 16; `CORIOLIS_THREADS=1` keeps it to one, and the picture is the same
+either way). `--quality 1-4` draws that many times bigger and shrinks for smooth edges (slower), and `--invert-pitch`
+swaps the pitch keys. The game saves when you dock and when you press S in the station, and the title offers to continue
 the saved game.
 
 | Keys in flight | |
@@ -123,7 +127,7 @@ rides the ship out of the station's docking bay: for the first few seconds it is
 controls locked, and then the pilot has it.
 
 In the station: Tab (or Shift+Tab) changes screen, arrows and Enter choose and buy, Backspace sells (or clears the
-destination on the chart), L launches, S saves, Esc is the menu. F11 or Alt+Enter turns full screen on and off. The Xbox controller works in the
+destination on the chart), L launches, S saves, Esc is the menu. F11 or Alt+Enter turns full screen on and off, and F3 changes the size of the picture. The Xbox controller works in the
 menus too: D-pad, A to choose, X to sell, Y to launch, LB/RB for the screens.
 
 The flight view has no frame round it: all of the upper four fifths is the view out of the ship, with a few lines of

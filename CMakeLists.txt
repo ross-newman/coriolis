@@ -38,6 +38,7 @@ add_library(coriolis
   src/music.cpp
   src/nebula.cpp
   src/obj.cpp
+  src/parallel.cpp
   src/png.cpp
   src/renderer.cpp
   src/screens.cpp
@@ -51,6 +52,8 @@ add_library(coriolis
   src/ui.cpp
   src/world.cpp
 )
+find_package(Threads REQUIRED)
+target_link_libraries(coriolis PUBLIC Threads::Threads)
 target_include_directories(coriolis PUBLIC include)
 target_compile_features(coriolis PUBLIC cxx_std_17)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

@@ -12,6 +12,7 @@
 #include "coriolis/model_builder.h"
 #include "coriolis/nebula.h"
 #include "coriolis/obj.h"
+#include "coriolis/parallel.h"
 #include "coriolis/png.h"
 #include "coriolis/renderer.h"
 #include "coriolis/ships.h"
@@ -529,9 +530,43 @@ void ObjMistakesAreReported() {
   CHECK(!LoadObj("/nonexistent/model.obj", {}, &model, &error));
 }
 
+void ParallelRowsDoEveryRowOnceAndNest() {
+  CHECK(ParallelThreads() >= 1);
+  // Every row exactly once, whatever the size of the job
+  for (const int rows : {0, 1, 5, 16, 17, 100, 1079, 5000}) {
+    std::vector<int> seen(static_cast<std::size_t>(rows), 0);
+    ParallelRows(0, rows, [&](int first, int last) {
+      for (int y = first; y < last; ++y) {
+        ++seen[static_cast<std::size_t>(y)];
+      }
+    });
+    CHECK(std::all_of(seen.begin(), seen.end(), [](int n) { return n == 1; }));
+  }
+  // A range that does not start at 0, and a job inside a job (run in place), and many jobs one after another
+  std::vector<int> seen(400, 0);
+  for (int round = 0; round < 200; ++round) {
+    ParallelRows(100, 300, [&](int first, int last) {
+      ParallelRows(first, last, [&](int a, int b) {
+        for (int y = a; y < b; ++y) {
+          ++seen[static_cast<std::size_t>(y)];
+        }
+      });
+    });
+  }
+  CHECK(seen[99] == 0 && seen[300] == 0);
+  CHECK(std::all_of(seen.begin() + 100, seen.begin() + 300, [](int n) { return n == 200; }));
+  // The picture drawn with the threads is the one drawn without them: a nebula, which is painted in bands of rows
+  Image a(640, 360);
+  Image b(640, 360);
+  DrawNebula(a, 7, 3);
+  DrawNebula(b, 7, 3);
+  CHECK(a == b);
+}
+
 }  // namespace
 
 int main() {
+  ParallelRowsDoEveryRowOnceAndNest();
   ThereAreAllTheShips();
   ShipsAreCentredAndSizedAlike();
   EveryShipDrawsAndTheyDiffer();

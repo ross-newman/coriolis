@@ -1,7 +1,7 @@
 // coriolis: the game in a window. It reads the keyboard and an Xbox style controller, and shows the title screen, the
 // station screens and the flight view that GameUi draws.
 //
-//   coriolis [--seed N] [--size WxH] [--window WxH] [--quality 1-4] [--save FILE] [--fullscreen] [--invert-pitch]
+//   coriolis [--seed N] [--size auto|native|WxH] [--window WxH] [--quality 1-4] [--save FILE] [--fullscreen] [--invert-pitch]
 //              [--autostart] [--frames N --screenshot FILE] [--no-sound] [--volume 0-100]
 //
 // Keys:  flight    arrows pitch and roll (Q E also roll), A D yaw, W S throttle, X full throttle, Z throttle off,
@@ -10,7 +10,7 @@
 //                  Y flight assist, N classic or Newtonian flight, 1 2 3 4 views, G galactic chart, P or Esc
 //                  pause, F1 the list of keys, hold Backspace to eject in the escape pod
 //        station   Tab next screen, arrows and Enter to choose and buy, Backspace sell, L launch, S save, Esc menu
-//        F11 or Alt+Enter full screen on and off, F2 sound on and off
+//        F11 or Alt+Enter full screen on and off, F2 sound on and off, F3 picture size (auto, 540, 720, 1080, native)
 
 #include <SDL.h>
 
@@ -254,8 +254,14 @@ void Set(FlightInput* in, Action a, bool pressed, bool held = false) {
 
 int main(int argc, char** argv) {
   std::uint64_t seed = static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
-  int width = 960;
-  int height = 540;
+  int width = 1920;
+  int height = 1080;
+  // How big the picture is drawn: "auto" (the default) starts at 1080 lines, never more than the window has pixels, and
+  // steps down if the machine is too slow (and back up when it is quick); a fixed height from --size WxH; or "native",
+  // a picture pixel to each screen pixel. F3 cycles.
+  enum class SizeMode { kAuto, kFixed, kNative };
+  SizeMode size_mode = SizeMode::kAuto;
+  bool size_given = false;
   int window_w = 1280;
   int window_h = 720;
   int quality = 1;
@@ -273,8 +279,16 @@ int main(int argc, char** argv) {
     if (arg == "--seed" && has_value) {
       seed = std::strtoull(argv[++i], nullptr, 10);
     } else if (arg == "--size" && has_value) {
-      if (!ParseSize(argv[++i], &width, &height)) {
-        std::fprintf(stderr, "bad size, expected WxH from 160x120 to 4096x4096\n");
+      const std::string value = argv[++i];
+      size_given = true;
+      if (value == "auto") {
+        size_mode = SizeMode::kAuto;
+      } else if (value == "native") {
+        size_mode = SizeMode::kNative;
+      } else if (ParseSize(value.c_str(), &width, &height)) {
+        size_mode = SizeMode::kFixed;
+      } else {
+        std::fprintf(stderr, "bad size, expected auto, native or WxH from 160x120 to 4096x4096\n");
         return 2;
       }
     } else if (arg == "--window" && has_value) {
@@ -308,13 +322,19 @@ int main(int argc, char** argv) {
       screenshot = argv[++i];
     } else {
       std::fprintf(stderr,
-                   "usage: coriolis [--seed N] [--size WxH] [--window WxH] [--quality 1-4] [--save FILE | --no-save] "
+                   "usage: coriolis [--seed N] [--size auto|native|WxH] [--window WxH] [--quality 1-4] [--save FILE | --no-save] "
                    "[--fullscreen] [--no-sound] [--volume 0-100] "
                    "[--invert-pitch] [--autostart] [--frames N --screenshot FILE]\n");
       return 2;
     }
   }
 
+  // A scripted run (--frames) keeps the same picture size every time, so its screenshots can be compared
+  if (frames >= 0 && !size_given) {
+    size_mode = SizeMode::kFixed;
+    width = 960;
+    height = 540;
+  }
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER) != 0) {
     std::fprintf(stderr, "SDL could not start: %s\n", SDL_GetError());
     return 1;
@@ -367,6 +387,22 @@ int main(int argc, char** argv) {
   FlightInput keys_pressed;
   double eject_hold = 0.0;
   float turn[3] = {0.0f, 0.0f, 0.0f};  // the keyboard's pitch, roll and yaw, eased
+  // The sizes F3 goes through, and what "auto" steps between
+  const int kHeights[] = {360, 540, 720, 900, 1080, 1440, 2160};
+  constexpr int kHeightCount = static_cast<int>(sizeof(kHeights) / sizeof(kHeights[0]));
+  int auto_level = 4;           // an index into kHeights: 1080 to begin with
+  int fixed_height = height;    // the height of SizeMode::kFixed
+  double draw_ms = 0.0;         // how long drawing a frame takes, smoothed
+  int frames_at_size = 0;       // frames since the size last changed
+  int try_again_at = 0;         // the frame before which "auto" does not try a bigger size
+  int slow_frames = 0;          // frames in a row that were slow
+  const auto size_label = [&]() {
+    char text[64];
+    const char* how = size_mode == SizeMode::kAuto ? "auto" : (size_mode == SizeMode::kNative ? "native" : "fixed");
+    std::snprintf(text, sizeof text, "Coriolis - %dp (%s)", height, how);
+    return std::string(text);
+  };
+  bool title_stale = true;
   bool running = true;
   int frame_count = 0;
   Uint64 last = SDL_GetPerformanceCounter();
@@ -433,6 +469,23 @@ int main(int argc, char** argv) {
             break;
           case SDLK_F11:
             if (!repeat) toggle_fullscreen();
+            break;
+          case SDLK_F3:
+            // Picture size: auto, then a fixed 540, 720 and 1080, then native, then auto again
+            if (!repeat) {
+              if (size_mode == SizeMode::kAuto) {
+                size_mode = SizeMode::kFixed;
+                fixed_height = 540;
+              } else if (size_mode == SizeMode::kFixed && fixed_height < 1080) {
+                fixed_height = fixed_height < 720 ? 720 : 1080;
+              } else if (size_mode == SizeMode::kFixed) {
+                size_mode = SizeMode::kNative;
+              } else {
+                size_mode = SizeMode::kAuto;
+              }
+              frames_at_size = 0;
+              title_stale = true;
+            }
             break;
           default:
             break;
@@ -605,23 +658,64 @@ int main(int argc, char** argv) {
       audio.SetMusic(track, ui.MusicLevel(track));
     }
 
-    // Keep the height, and take the width from the shape of the window, so the picture always fills it. The pixels stay
-    // square, and the layout of everything follows the size of the picture.
+    // Choose the height of the picture, and take the width from the shape of the window, so the picture always fills it.
+    // The pixels stay square, and the layout of everything follows the size of the picture. Never more pixels than the
+    // window has: that would only be thrown away.
     int out_w = 0;
     int out_h = 0;
     if (SDL_GetRendererOutputSize(renderer, &out_w, &out_h) == 0 && out_w > 0 && out_h > 0) {
-      const int want_w = std::clamp(static_cast<int>(std::lround(static_cast<double>(height) * out_w / out_h)), 160, 4096);
-      if (want_w != width) {
-        SDL_Texture* next = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, want_w, height);
+      int want_h = height;
+      if (size_mode == SizeMode::kNative) {
+        want_h = out_h;
+      } else if (size_mode == SizeMode::kFixed) {
+        want_h = std::min(fixed_height, out_h);
+      } else {
+        // Auto: step down only when frames stay slow for a good while (over 30 ms, under 33 a second, for a second and a
+        // bit: the launch from the bay is slow for a few seconds and then it is over), and try a size up when they are
+        // quick. Drawing does not take time in proportion to the pixels, so a size is tried and timed instead of
+        // guessed; one that proved too slow is not tried again for a while.
+        int top = 0;
+        while (top + 1 < kHeightCount && kHeights[top + 1] <= out_h) {
+          ++top;
+        }
+        auto_level = std::clamp(auto_level, 0, top);
+        ++frames_at_size;
+        slow_frames = draw_ms > 30.0 ? slow_frames + 1 : 0;
+        if (slow_frames > 75 && auto_level > 0) {
+          --auto_level;
+          slow_frames = 0;
+          try_again_at = frame_count + 1200;
+        } else if (auto_level < top && frames_at_size > 90 && frame_count >= try_again_at && draw_ms < 14.0) {
+          ++auto_level;
+        }
+        want_h = kHeights[auto_level];
+      }
+      want_h = std::clamp(want_h, 120, 4096);
+      const int want_w = std::clamp(static_cast<int>(std::lround(static_cast<double>(want_h) * out_w / out_h)), 160, 4096);
+      if (want_w != width || want_h != height) {
+        SDL_Texture* next = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, want_w, want_h);
         if (next != nullptr) {
+          // The drawing time follows the number of pixels, so keep the smoothed time in step with the new size
+          const double ratio = static_cast<double>(want_w) * want_h / (static_cast<double>(width) * height);
+          draw_ms *= ratio;
           SDL_DestroyTexture(texture);
           texture = next;
           width = want_w;
+          height = want_h;
           image = Image(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
+          frames_at_size = 0;
+          title_stale = true;
         }
       }
     }
+    if (title_stale) {
+      SDL_SetWindowTitle(window, size_label().c_str());
+      title_stale = false;
+    }
+    const Uint64 draw_start = SDL_GetPerformanceCounter();
     ui.Draw(image);
+    const double drew_ms = static_cast<double>(SDL_GetPerformanceCounter() - draw_start) * 1000.0 / frequency;
+    draw_ms = draw_ms <= 0.0 ? drew_ms : draw_ms + 0.1 * (drew_ms - draw_ms);
     SDL_UpdateTexture(texture, nullptr, image.data(), width * 3);
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, nullptr, nullptr);

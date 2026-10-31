@@ -1,5 +1,7 @@
 #include "coriolis/cockpit.h"
 
+#include "coriolis/parallel.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -148,13 +150,14 @@ bool IsThreat(const Entity& e, EntityId player) {
 /// A drawing surface: the image, a depth buffer for the 3D view, and drawing helpers
 class Canvas {
  public:
-  Canvas(Image& image, int view_height)
+  /// `with_depth` is false for flat drawing (the console screens), which never tests depth: no buffer is made
+  Canvas(Image& image, int view_height, bool with_depth = true)
       : image_(image),
         width_(static_cast<int>(image.width())),
         height_(static_cast<int>(image.height())),
         view_height_(view_height),
         clip_(view_height),
-        depth_(static_cast<std::size_t>(width_) * static_cast<std::size_t>(std::max(view_height, 0)), 0.0f) {}
+        depth_(with_depth ? static_cast<std::size_t>(width_) * static_cast<std::size_t>(std::max(view_height, 0)) : 0, 0.0f) {}
 
   int width() const { return width_; }
   int height() const { return height_; }
@@ -295,7 +298,8 @@ class Canvas {
     const int min_y = std::max(0, static_cast<int>(std::floor(std::min({p[0][1], p[1][1], p[2][1]}))));
     const int max_y = std::min(view_height_ - 1, static_cast<int>(std::ceil(std::max({p[0][1], p[1][1], p[2][1]}))));
     const Rgb edge = Scale(colour, 0.35f);
-    for (int y = min_y; y <= max_y; ++y) {
+    const auto fill_rows = [&](int row_begin, int row_end) {
+    for (int y = row_begin; y < row_end; ++y) {
       for (int x = min_x; x <= max_x; ++x) {
         const float px = static_cast<float>(x) + 0.5f;
         const float py = static_cast<float>(y) + 0.5f;
@@ -324,6 +328,13 @@ class Canvas {
         image_.Set(x, y, out);
       }
     }
+    };
+    // A big triangle is filled by several threads, each with its own rows; a small one is not worth the wake-up
+    if (static_cast<long long>(max_x - min_x + 1) * (max_y - min_y + 1) >= 60000) {
+      ParallelRows(min_y, max_y + 1, fill_rows, 24);
+    } else {
+      fill_rows(min_y, max_y + 1);
+    }
   }
 
   /// Forget what is in front of what, so something can be drawn over everything (the cockpit)
@@ -342,7 +353,8 @@ class Canvas {
     const int max_y = std::min(view_height_ - 1, static_cast<int>(std::ceil(std::max({p[0][1], p[1][1], p[2][1]}))));
     const float du = 0.35f * std::max(1.0f, minify) / static_cast<float>(tex.width());
     const float dv = 0.35f * std::max(1.0f, minify) / static_cast<float>(tex.height());
-    for (int y = min_y; y <= max_y; ++y) {
+    const auto fill_rows = [&](int row_begin, int row_end) {
+    for (int y = row_begin; y < row_end; ++y) {
       for (int x = min_x; x <= max_x; ++x) {
         const float px = static_cast<float>(x) + 0.5f;
         const float py = static_cast<float>(y) + 0.5f;
@@ -373,6 +385,12 @@ class Canvas {
         }
         image_.Set(x, y, c);
       }
+    }
+    };
+    if (static_cast<long long>(max_x - min_x + 1) * (max_y - min_y + 1) >= 30000) {
+      ParallelRows(min_y, max_y + 1, fill_rows, 24);
+    } else {
+      fill_rows(min_y, max_y + 1);
     }
   }
 
@@ -588,7 +606,8 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
     }
   }
   const double cc = Dot(centre, centre) - radius * radius;
-  for (int y = y0; y <= y1; ++y) {
+  ParallelRows(y0, y1 + 1, [&](int row_begin, int row_end) {
+  for (int y = row_begin; y < row_end; ++y) {
     for (int x = x0; x <= x1; ++x) {
       const Vec3d ray{(x + 0.5 - cam.cx) / cam.f, -(y + 0.5 - cam.cy) / cam.f, 1.0};
       const double rr = Dot(ray, ray);
@@ -691,6 +710,7 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
       canvas.Set(x, y, colour);
     }
   }
+  });
   if (!ringed) {
     return;
   }
@@ -705,7 +725,8 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
   const float offset = static_cast<float>(Hash32(style_seed ^ 0x5EED1234U) & 1023U) * 0.53f;
   const double inner = style.ring_inner;
   const double outer = style.ring_outer;
-  for (int y = y0; y <= y1; ++y) {
+  ParallelRows(y0, y1 + 1, [&](int row_begin, int row_end) {
+  for (int y = row_begin; y < row_end; ++y) {
     for (int x = x0; x <= x1; ++x) {
       const Vec3d ray{(x + 0.5 - cam.cx) / cam.f, -(y + 0.5 - cam.cy) / cam.f, 1.0};
       const double slope = Dot(axis, ray);
@@ -750,6 +771,7 @@ void DrawBody(Canvas& canvas, const Camera& cam, const Entity& body, const Vec3d
       }
     }
   }
+  });
 }
 
 /// Draw one entity's model from the cockpit
@@ -935,7 +957,7 @@ std::string Fmt(const char* format, double a) {
 
 /// The dark glass of a screen with a faint grid, a title and corner marks
 void ScreenBase(Image& tex, const std::string& title, Rgb accent, int ts) {
-  Canvas c(tex, static_cast<int>(tex.height()));
+  Canvas c(tex, static_cast<int>(tex.height()), false);
   const int w = static_cast<int>(tex.width());
   const int h = static_cast<int>(tex.height());
   for (int y = 0; y < h; ++y) {
@@ -982,7 +1004,7 @@ void ScreenFinish(Image& tex) {
 
 /// A segmented gauge with a label and a value
 void Meter(Image& tex, int x, int y, int w, double fraction, Rgb colour, const std::string& label, const std::string& value, int ts) {
-  Canvas c(tex, static_cast<int>(tex.height()));
+  Canvas c(tex, static_cast<int>(tex.height()), false);
   DrawText(tex, label, x, y, static_cast<std::uint32_t>(ts), {150, 178, 192});
   DrawText(tex, value, x + w - TextWidth(value, ts), y, static_cast<std::uint32_t>(ts), {235, 246, 250});
   const int by = y + 10 * ts;
@@ -1000,7 +1022,7 @@ void DrawSystemsScreen(Image& tex, const Game& game, const Entity& me, const Pal
   const int ts = std::max(1, h / 90);
   const Rgb accent = Glowing(pal.accent);
   ScreenBase(tex, "SHIP SYSTEMS", accent, ts);
-  Canvas c(tex, h);
+  Canvas c(tex, h, false);
   const int x = 14;
   const int gap = 16;
   const int mw = (w - 28 - gap) / 2;
@@ -1057,7 +1079,7 @@ void DrawScannerScreen(Image& tex, const Game& game, const Entity& me, const Pal
   const int ts = std::max(1, h / 90);
   const Rgb accent = Glowing(pal.accent);
   ScreenBase(tex, "TACTICAL SCANNER", accent, ts);
-  Canvas c(tex, h);
+  Canvas c(tex, h, false);
   const float cx = static_cast<float>(w) / 2.0f;
   const float cy = static_cast<float>(h) * 0.61f;
   const float rx = static_cast<float>(w) * 0.32f;
@@ -1154,7 +1176,7 @@ void DrawNavScreen(Image& tex, const Game& game, const Entity& me, const Palette
   const int ts = std::max(1, h / 90);
   const Rgb accent = Glowing(pal.accent);
   ScreenBase(tex, "NAVIGATION", accent, ts);
-  Canvas c(tex, h);
+  Canvas c(tex, h, false);
   const int x = 14;
   const int top = 12 + 10 * ts;
   const Rgb dim{150, 178, 192};
@@ -1432,7 +1454,8 @@ void Bloom(Image& img, float strength) {
   const int bh = std::max(1, h / 4);
   std::vector<float> a(static_cast<std::size_t>(bw) * static_cast<std::size_t>(bh) * 3, 0.0f);
   std::vector<float> b(a.size(), 0.0f);
-  for (int by = 0; by < bh; ++by) {
+  ParallelRows(0, bh, [&](int by_begin, int by_end) {
+  for (int by = by_begin; by < by_end; ++by) {
     for (int bx = 0; bx < bw; ++bx) {
       float sum[3] = {0, 0, 0};
       int n = 0;
@@ -1450,9 +1473,11 @@ void Bloom(Image& img, float strength) {
       }
     }
   }
+  });
   const float weights[7] = {1, 2, 3, 4, 3, 2, 1};
   for (int pass = 0; pass < 2; ++pass) {
-    for (int y = 0; y < bh; ++y) {
+    ParallelRows(0, bh, [&](int ya, int yb) {
+    for (int y = ya; y < yb; ++y) {
       for (int x = 0; x < bw; ++x) {
         for (int k = 0; k < 3; ++k) {
           float s = 0.0f;
@@ -1464,7 +1489,9 @@ void Bloom(Image& img, float strength) {
         }
       }
     }
-    for (int y = 0; y < bh; ++y) {
+    });
+    ParallelRows(0, bh, [&](int ya, int yb) {
+    for (int y = ya; y < yb; ++y) {
       for (int x = 0; x < bw; ++x) {
         for (int k = 0; k < 3; ++k) {
           float s = 0.0f;
@@ -1476,8 +1503,10 @@ void Bloom(Image& img, float strength) {
         }
       }
     }
+    });
   }
-  for (int y = 0; y < h; ++y) {
+  ParallelRows(0, h, [&](int row_begin, int row_end) {
+  for (int y = row_begin; y < row_end; ++y) {
     const float fy = std::clamp(static_cast<float>(y) / 4.0f - 0.5f, 0.0f, static_cast<float>(bh - 1));
     const int y0 = static_cast<int>(fy);
     const int y1 = std::min(y0 + 1, bh - 1);
@@ -1499,6 +1528,70 @@ void Bloom(Image& img, float strength) {
       }
     }
   }
+  });
+}
+
+/// Soften the stair steps along edges (in the way of FXAA): a pixel whose neighbours differ a lot in brightness is mixed
+/// with the pixel across the edge it is on and the ones along it, so a staircase becomes a smooth ramp. Flat areas are
+/// left alone, and so are lone bright dots (stars), which would only be dimmed. Only the first `rows` rows are done.
+void SoftenEdges(Image& img, int rows) {
+  const int w = static_cast<int>(img.width());
+  rows = std::min(rows, static_cast<int>(img.height()));
+  if (w < 3 || rows < 3) {
+    return;
+  }
+  const std::vector<std::uint8_t> src(img.data(), img.data() + static_cast<std::size_t>(w) * static_cast<std::size_t>(rows) * 3);
+  const auto at = [&](int x, int y) { return &src[(static_cast<std::size_t>(y) * static_cast<std::size_t>(w) + static_cast<std::size_t>(x)) * 3]; };
+  const auto luma = [&](int x, int y) {
+    const std::uint8_t* p = at(x, y);
+    return 77 * static_cast<int>(p[0]) + 150 * static_cast<int>(p[1]) + 29 * static_cast<int>(p[2]);
+  };
+  ParallelRows(1, rows - 1, [&](int y_begin, int y_end) {
+    for (int y = y_begin; y < y_end; ++y) {
+      for (int x = 1; x < w - 1; ++x) {
+        const int c = luma(x, y);
+        const int n = luma(x, y - 1);
+        const int s = luma(x, y + 1);
+        const int e = luma(x + 1, y);
+        const int wl = luma(x - 1, y);
+        const int hi = std::max({c, n, s, e, wl});
+        const int lo = std::min({c, n, s, e, wl});
+        const int range = hi - lo;
+        if (range < std::max(14 * 256, hi / 8)) {
+          continue;
+        }
+        if (c == hi && c - std::max(std::max(n, s), std::max(e, wl)) > range * 6 / 10) {
+          continue;  // a lone bright dot
+        }
+        const int nw = luma(x - 1, y - 1);
+        const int ne = luma(x + 1, y - 1);
+        const int sw = luma(x - 1, y + 1);
+        const int se = luma(x + 1, y + 1);
+        const int horizontal = std::abs(nw + sw - 2 * wl) + 2 * std::abs(n + s - 2 * c) + std::abs(ne + se - 2 * e);
+        const int vertical = std::abs(nw + ne - 2 * n) + 2 * std::abs(wl + e - 2 * c) + std::abs(sw + se - 2 * s);
+        // The pixel across the edge, and the two along it
+        int ox = 0;
+        int oy = 0;
+        int ax = 0;
+        int ay = 0;
+        if (horizontal >= vertical) {
+          oy = std::abs(n - c) >= std::abs(s - c) ? -1 : 1;
+          ax = 1;
+        } else {
+          ox = std::abs(wl - c) >= std::abs(e - c) ? -1 : 1;
+          ay = 1;
+        }
+        const std::uint8_t* pc = at(x, y);
+        const std::uint8_t* po = at(x + ox, y + oy);
+        const std::uint8_t* pa = at(x + ax, y + ay);
+        const std::uint8_t* pb = at(x - ax, y - ay);
+        std::uint8_t* out = img.data() + (static_cast<std::size_t>(y) * static_cast<std::size_t>(w) + static_cast<std::size_t>(x)) * 3;
+        for (int k = 0; k < 3; ++k) {
+          out[k] = static_cast<std::uint8_t>((4 * pc[k] + 2 * po[k] + pa[k] + pb[k] + 4) / 8);
+        }
+      }
+    }
+  });
 }
 
 /// Average blocks of pixels down to a smaller picture: supersampling, for smooth edges
@@ -1977,6 +2070,12 @@ void Cockpit::Render(Image& image, const Game& game, std::uint32_t frame) {
   // Hyperspace: zoom into space on the way out, and back out of it on arrival
   if (game.hyperspace_warp() > 0.0) {
     WarpZoom(image, game.hyperspace_warp(), cam.cx, cam.cy);
+  }
+
+  // Smooth the edges of everything drawn so far (the world and its ships); the brackets, the HUD and the console come after,
+  // so their lines stay crisp. A supersampled picture is smoothed by the shrinking instead.
+  if (false && antialias_ && supersample_ <= 1) {
+    SoftenEdges(image, view_height);
   }
 
   // Target brackets and the point to aim at

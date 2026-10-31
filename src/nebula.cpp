@@ -1,4 +1,5 @@
 #include "coriolis/nebula.h"
+#include "coriolis/parallel.h"
 
 #include <algorithm>
 #include <cmath>
@@ -292,7 +293,8 @@ void Nebula::Paint(Image& image, const Quat& orientation, double focal, double c
   const std::uint32_t grid_w = (width + step - 1) / step + 2;
   const std::uint32_t grid_h = (height + step - 1) / step + 2;
   std::vector<float> grid(static_cast<std::size_t>(grid_w) * grid_h * 3);
-  for (std::uint32_t gy = 0; gy < grid_h; ++gy) {
+  ParallelRows(0, static_cast<int>(grid_h), [&](int gy_begin, int gy_end) {
+  for (std::uint32_t gy = static_cast<std::uint32_t>(gy_begin); gy < static_cast<std::uint32_t>(gy_end); ++gy) {
     const double v = -(static_cast<double>(gy * step) - cy) / focal;
     for (std::uint32_t gx = 0; gx < grid_w; ++gx) {
       const double u = (static_cast<double>(gx * step) - cx) / focal;
@@ -303,9 +305,11 @@ void Nebula::Paint(Image& image, const Quat& orientation, double focal, double c
       out[2] = c[2];
     }
   }
+  });
 
   const float inv_step = 1.0f / static_cast<float>(step);
-  for (std::uint32_t y = 0; y < height; ++y) {
+  ParallelRows(0, static_cast<int>(height), [&](int row_begin, int row_end) {
+  for (std::uint32_t y = static_cast<std::uint32_t>(row_begin); y < static_cast<std::uint32_t>(row_end); ++y) {
     const float fy = (static_cast<float>(y) + 0.5f) * inv_step;
     const std::uint32_t gy = static_cast<std::uint32_t>(fy);
     const float ty = fy - static_cast<float>(gy);
@@ -325,6 +329,7 @@ void Nebula::Paint(Image& image, const Quat& orientation, double focal, double c
       }
     }
   }
+  });
 }
 
 void DrawNebula(Image& image, std::uint32_t seed, std::uint32_t frame) {
