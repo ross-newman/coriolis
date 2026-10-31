@@ -868,6 +868,8 @@ int main(int argc, char** argv) {
     failures += Save(image, png + "/screens/equipment.png") ? 0 : 1;
     DrawShipyardScreen(image, game, 3);
     failures += Save(image, png + "/screens/shipyard.png") ? 0 : 1;
+    DrawMissionsScreen(image, game);
+    failures += Save(image, png + "/screens/missions.png") ? 0 : 1;
     DrawChartScreen(image, game);
     failures += Save(image, png + "/screens/chart.png") ? 0 : 1;
     DrawSystemScreen(image, game, game.selected_system());

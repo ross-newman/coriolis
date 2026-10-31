@@ -325,6 +325,15 @@ Json CommanderToJson(const Commander& c) {
   root.Set("kills", Json::Number(c.kills));
   root.Set("market_mood", Json::Number(static_cast<double>(c.market_mood)));
   root.Set("ship", Json::String(c.ship));
+  root.Set("story_step", Json::Number(c.story_step));
+  Json mission = Json::MakeObject();
+  mission.Set("kind", Json::Number(static_cast<int>(c.mission.kind)));
+  mission.Set("step", Json::Number(c.mission.step));
+  mission.Set("destination", Json::Number(c.mission.destination));
+  mission.Set("count", Json::Number(c.mission.count));
+  mission.Set("progress", Json::Number(c.mission.progress));
+  mission.Set("reward", Json::Number(c.mission.reward));
+  root.Set("mission", std::move(mission));
   return root;
 }
 
@@ -424,6 +433,33 @@ bool CommanderFromJson(const Json& json, Commander* out, std::string* error) {
       !GetOptionalFlag(*eq, "cargo_bay", &c.equipment.cargo_bay, error) ||
       !GetOptionalFlag(*eq, "galactic_hyperdrive", &c.equipment.galactic_hyperdrive, error)) {
     return false;
+  }
+  // The story and the job under way, which saves from before the story do not have
+  c.story_step = 0;
+  c.mission = Mission{};
+  const Json* story = json.Find("story_step");
+  const Json* mission = json.Find("mission");
+  if (story != nullptr || mission != nullptr) {
+    double step = 0.0, kind = 0.0, mstep = 0.0, dest = -1.0, count = 0.0, progress = 0.0, reward = 0.0;
+    if (story == nullptr || mission == nullptr || !mission->is_object() ||
+        !GetNumber(json, "story_step", &step, error) || !GetNumber(*mission, "kind", &kind, error) ||
+        !GetNumber(*mission, "step", &mstep, error) || !GetNumber(*mission, "destination", &dest, error) ||
+        !GetNumber(*mission, "count", &count, error) || !GetNumber(*mission, "progress", &progress, error) ||
+        !GetNumber(*mission, "reward", &reward, error)) {
+      return Fail(error, "commander: the story or the mission is damaged");
+    }
+    if (step < 0 || step > 100 || kind < 0 || kind > 2 || mstep < 0 || mstep > 100 || dest < -1 ||
+        dest >= kSystemsPerGalaxy || count < 0 || count > 1000 || progress < 0 || progress > 1000 || reward < 0 ||
+        reward > 100000000) {
+      return Fail(error, "commander: a value of the mission is out of range");
+    }
+    c.story_step = static_cast<int>(step);
+    c.mission.kind = static_cast<MissionKind>(static_cast<int>(kind));
+    c.mission.step = static_cast<int>(mstep);
+    c.mission.destination = static_cast<int>(dest);
+    c.mission.count = static_cast<int>(count);
+    c.mission.progress = static_cast<int>(progress);
+    c.mission.reward = static_cast<int>(reward);
   }
   *out = c;
   return true;

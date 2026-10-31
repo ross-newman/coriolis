@@ -314,8 +314,8 @@ const Model& TitleModel() {
   return model;
 }
 
-const Screen kDockedScreens[] = {Screen::kStatus, Screen::kMarket, Screen::kEquipment, Screen::kShipyard, Screen::kChart,
-                                 Screen::kSystem};
+const Screen kDockedScreens[] = {Screen::kStatus, Screen::kMarket, Screen::kEquipment, Screen::kShipyard,
+                                 Screen::kMissions, Screen::kChart, Screen::kSystem};
 
 }  // namespace
 
@@ -549,6 +549,7 @@ float GameUi::MusicLevel() const {
     case Screen::kMarket:
     case Screen::kEquipment:
     case Screen::kShipyard:
+    case Screen::kMissions:
     case Screen::kChart:
     case Screen::kSystem:
       return paused_ ? 0.2f : 0.5f;
@@ -841,6 +842,14 @@ void GameUi::Key(UiKey key) {
       Say(bought ? std::string("Bought the ") + ShipForSaleAt(shipyard_row_).name
                  : "Cannot buy: not sold here, already yours, too dear, or the hold is too small for the cargo");
     }
+  } else if (screen_ == Screen::kMissions) {
+    if (key == UiKey::kAccept) {
+      const bool taken = game_.AcceptMission();
+      Cue(taken ? SoundEffect::kEquipmentFit : SoundEffect::kError, 0.8f);
+    } else if (key == UiKey::kAlternate) {
+      const bool gave_up = game_.AbandonMission();
+      Cue(gave_up ? SoundEffect::kUiBack : SoundEffect::kError, 0.8f);
+    }
   } else if (screen_ == Screen::kChart || screen_ == Screen::kSystem) {
     if (key == UiKey::kUp) {
       MoveDestination(0, -1);
@@ -1007,6 +1016,10 @@ void GameUi::DrawDocked(Image& image) {
     case Screen::kShipyard:
       DrawShipyardScreen(image, game_, shipyard_row_, static_cast<float>(time_) * 0.8f);
       hint = "UP DOWN CHOOSE   ENTER BUY (TRADES IN YOUR SHIP)   TAB NEXT   L LAUNCH";
+      break;
+    case Screen::kMissions:
+      DrawMissionsScreen(image, game_);
+      hint = "ENTER TAKE THE JOB   BACKSPACE GIVE UP   TAB NEXT   L LAUNCH";
       break;
     case Screen::kChart:
       DrawChartScreen(image, game_);

@@ -31,6 +31,7 @@ add_library(coriolis
   src/input.cpp
   src/json.cpp
   src/market.cpp
+  src/missions.cpp
   src/music.cpp
   src/nebula.cpp
   src/obj.cpp

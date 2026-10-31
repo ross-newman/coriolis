@@ -67,6 +67,15 @@ class Game {
   /// Buy a ship from the yard (see `coriolis::BuyShip`), trading in the one flown. Only in the station.
   bool BuyShip(int index);
 
+  // Missions (see missions.h)
+  /// The job on offer at this station: the next step of the story. False if one is already under way or the story is
+  /// finished.
+  bool MissionOnOffer(Mission* out) const;
+  /// Take the job on offer. Only in the station.
+  bool AcceptMission();
+  /// Give up the job under way (the story step is offered again). Only in the station.
+  bool AbandonMission();
+
   // Flight
   /// Advance by `seconds` (the game steps at a fixed 60 Hz inside) with the player's input
   void Update(const FlightInput& input, double seconds);

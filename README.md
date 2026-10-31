@@ -48,7 +48,7 @@ and published by GitHub Actions on every push to `main`; the pictures and pages 
 | Game engine | `include/coriolis/game.h` and others | See [The game engine](#the-game-engine) |
 | Engine demo | `apps/engine_demo` | A computer pilot plays the game and prints what happens |
 | Cockpit | `cockpit.h`, `src/cockpit.cpp` | The flight view: a clear view out of the ship (stars, planet and sun, solid ships and stations, bolts, explosions, target brackets) over the top four fifths, and a 3D console in the bottom fifth with a ship systems screen, a 3D scanner and a navigation screen, painted in the colours of the player's ship |
-| Screens | `screens.h` | The station screens: status, market, equipment (with a 3D model of the item), shipyard, galactic chart, data on a system |
+| Screens | `screens.h` | The station screens: status, market, equipment (with a 3D model of the item), shipyard, missions, galactic chart, data on a system |
 | Game UI | `ui.h`, `src/ui.cpp` | The title, the station screens with buying and selling, the chart, flight, pause and saving, with no window so it can be tested |
 | Flight view | `apps/flight_view` | The computer pilot plays and the cockpit and screens are saved as PNG files |
 | The game | `apps/play` | The game in a window (SDL2): `coriolis_game` |
@@ -387,4 +387,3 @@ released here under the MIT licence.
 ## What is not done yet
 
 - More music: there is the station theme, but none for the title, a fight or a jump
-- Missions and a story

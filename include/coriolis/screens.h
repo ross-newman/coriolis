@@ -24,6 +24,9 @@ void DrawEquipmentScreen(Image& image, const Game& game, int selected, float ang
 /// `selected` is the highlighted row, drawn in 3D below the list.
 void DrawShipyardScreen(Image& image, const Game& game, int selected, float angle = 2.4f);
 
+/// The mission board: the job under way, or the next one on offer, with its briefing and pay
+void DrawMissionsScreen(Image& image, const Game& game);
+
 /// The galactic chart: every system in the galaxy, the one the ship is at, the range of the fuel and the chosen
 /// destination, with the data on the chosen system below
 void DrawChartScreen(Image& image, const Game& game);

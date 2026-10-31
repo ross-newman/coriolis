@@ -8,6 +8,7 @@
 #include "coriolis/blueprint.h"
 #include "coriolis/commodity_models.h"
 #include "coriolis/equipment_models.h"
+#include "coriolis/missions.h"
 #include "coriolis/renderer.h"
 
 namespace coriolis {
@@ -151,6 +152,9 @@ void DrawStatusScreen(Image& image, const Game& game) {
   std::snprintf(buffer, sizeof buffer, "FUEL:               %.1f LIGHT YEARS", c.fuel);
   p.Line(buffer);
   p.Line("CASH:               " + Credits(c.credits));
+  if (c.mission.kind != MissionKind::kNone) {
+    p.Line("MISSION:            " + MissionStatus(c.mission, game.galaxy()), kBright);
+  }
   p.Line(std::string("LEGAL STATUS:       ") + LegalName(c.legal_status), c.legal_status > 0 ? Rgb{255, 140, 90} : kText);
   std::snprintf(buffer, sizeof buffer, "RATING:             %s (%.0f KILLS)", RankName(c.kills), std::floor(c.kills));
   p.Line(buffer, kBright);
@@ -274,6 +278,45 @@ void DrawEquipmentScreen(Image& image, const Game& game, int selected, float ang
     const std::int64_t tile_w = std::min(room_w, side * 2);
     DrawPreview(image, GetItemModel(kEquipment[selected].item), (static_cast<std::int64_t>(image.width()) - tile_w) / 2, top,
                 tile_w, side, angle);
+  }
+}
+
+void DrawMissionsScreen(Image& image, const Game& game) {
+  Page p(image);
+  const Commander& c = game.commander();
+  p.Title("MISSIONS");
+  char line[96];
+  std::snprintf(line, sizeof line, "JOBS DONE: %d OF %d", std::min(c.story_step, kStorySteps), kStorySteps);
+  p.Line(line, kDim);
+  p.Gap();
+  Mission offer;
+  if (c.mission.kind != MissionKind::kNone) {
+    p.Line("UNDER WAY: " + MissionTitle(c.mission), kTitle);
+    p.Gap();
+    for (const std::string& text : MissionBriefing(c.mission, game.galaxy())) {
+      p.Line(text);
+    }
+    p.Gap();
+    p.Line("TO DO: " + MissionStatus(c.mission, game.galaxy()), kBright);
+    p.Gap();
+    p.Line("BACKSPACE GIVES UP THE JOB", kDim);
+  } else if (game.MissionOnOffer(&offer)) {
+    p.Line("ON OFFER: " + MissionTitle(offer), kTitle);
+    p.Gap();
+    for (const std::string& text : MissionBriefing(offer, game.galaxy())) {
+      p.Line(text);
+    }
+    p.Gap();
+    p.Line("ENTER TAKES THE JOB", kBright);
+  } else if (c.story_step >= kStorySteps) {
+    p.Line("NO MORE WORK FROM THE WOMAN AT THE BAR", kTitle);
+    p.Gap();
+    p.Line("THE PACKETS ARE DELIVERED AND THE FLEET IS BROKEN. THE NEXT GALAXY");
+    p.Line("IS ONE JUMP AWAY. TRADE, HUNT AND EXPLORE.");
+  } else {
+    p.Line("NO WORK ON OFFER HERE", kTitle);
+    p.Gap();
+    p.Line("THIS SYSTEM HAS NO NEIGHBOURS WITHIN REACH OF THE FUEL");
   }
 }
 

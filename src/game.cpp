@@ -6,6 +6,7 @@
 
 #include "coriolis/ai.h"
 #include "coriolis/hash.h"
+#include "coriolis/missions.h"
 #include "coriolis/steering.h"
 
 namespace coriolis {
@@ -127,6 +128,29 @@ bool Game::BuyItem(Item item) {
 
 bool Game::BuyShip(int index) {
   return mode_ == GameMode::kDocked && coriolis::BuyShip(commander_, index, system().tech_level);
+}
+
+bool Game::MissionOnOffer(Mission* out) const {
+  return commander_.mission.kind == MissionKind::kNone && MissionOffered(commander_, galaxy_, out);
+}
+
+bool Game::AcceptMission() {
+  Mission offer;
+  if (mode_ != GameMode::kDocked || !MissionOnOffer(&offer)) {
+    return false;
+  }
+  commander_.mission = offer;
+  Say("Job taken: " + MissionStatus(offer, galaxy_));
+  return true;
+}
+
+bool Game::AbandonMission() {
+  if (mode_ != GameMode::kDocked || commander_.mission.kind == MissionKind::kNone) {
+    return false;
+  }
+  commander_.mission = Mission{};
+  Say("Job abandoned");
+  return true;
 }
 
 void Game::SpawnPlayer(const Vec3d& position, const Quat& orientation, double speed) {
@@ -330,6 +354,10 @@ void Game::Dock() {
   ++commander_.market_mood;
   RefreshMarket();
   Say("Docked at " + system().name);
+  if (commander_.mission.kind != MissionKind::kNone && MissionComplete(commander_.mission, commander_.system)) {
+    Say(MissionDone(commander_.mission));
+    PayMission(commander_);
+  }
 }
 
 bool Game::Eject() {
@@ -346,6 +374,8 @@ bool Game::Eject() {
   fresh.galaxy = commander_.galaxy;
   fresh.system = commander_.system;
   fresh.market_mood = commander_.market_mood;
+  fresh.mission = commander_.mission;
+  fresh.story_step = commander_.story_step;
   commander_ = fresh;
   Dock();
   Say("You ejected. The ship is lost, but the escape pod got you to the station.");
@@ -373,6 +403,11 @@ void Game::OnKill(const Event& event) {
     commander_.legal_status = std::min(255, commander_.legal_status + 5);
   }
   Say(text);
+  Mission& job = commander_.mission;
+  if (event.team == Team::kPirate && job.kind == MissionKind::kHunt && job.progress < job.count) {
+    ++job.progress;
+    Say(MissionStatus(job, galaxy_));
+  }
   const std::string rank = RankName(commander_.kills);
   if (rank != last_rank_) {
     last_rank_ = rank;

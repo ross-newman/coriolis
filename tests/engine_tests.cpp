@@ -19,6 +19,7 @@
 #include "coriolis/json.h"
 #include "coriolis/market.h"
 #include "coriolis/math.h"
+#include "coriolis/missions.h"
 #include "coriolis/renderer.h"
 #include "coriolis/ships.h"
 #include "coriolis/spawner.h"
@@ -1576,6 +1577,178 @@ void ShipsAreBoughtWithTheTradeInOfTheOldOne() {
   CHECK(!game.BuyShip(adder));
 }
 
+/// Fly the ship back into the bay with the docking computer, and dock
+bool FlyBackAndDock(Game& game) {
+  game.commander().equipment.docking_computer = true;
+  Entity* me = game.player();
+  const Entity* station = game.world().FindKind(EntityKind::kStation);
+  const Vec3d axis = DockAxis(*station);
+  me->position = DockPoint(*station) + axis * 4000.0 + Vec3d{1500, 800, 0};
+  me->orientation = LookAlong({1, 0, 0}, {0, 1, 0});
+  me->velocity = Vec3d{};
+  FlightInput press;
+  press.pressed.set(static_cast<std::size_t>(Action::kDockingComputer));
+  game.Update(press, 1.0 / 60.0);
+  for (int i = 0; i < 60 * 300 && game.mode() == GameMode::kFlight; ++i) {
+    game.Update(FlightInput(), 1.0 / 60.0);
+  }
+  return game.mode() == GameMode::kDocked;
+}
+
+void EveryStepOfTheStoryIsOfferedWithItsBriefing() {
+  const Galaxy galaxy(0);
+  for (int step = 0; step < kStorySteps; ++step) {
+    Commander c = StartCommander();
+    c.story_step = step;
+    Mission m;
+    CHECK(MissionOffered(c, galaxy, &m));
+    CHECK(m.step == step && m.kind != MissionKind::kNone);
+    CHECK(!MissionTitle(m).empty() && !MissionDone(m).empty() && !MissionStatus(m, galaxy).empty());
+    const std::vector<std::string> lines = MissionBriefing(m, galaxy);
+    CHECK(lines.size() >= 3);
+    for (const std::string& line : lines) {
+      CHECK(line.size() <= 78);
+    }
+    if (m.kind == MissionKind::kDeliver) {
+      CHECK(m.destination >= 0 && m.destination != c.system);
+      CHECK(galaxy.DistanceLy(c.system, m.destination) <= kMaxFuel);
+      CHECK(lines[0].find(galaxy.system(m.destination).name) != std::string::npos ||
+            lines[1].find(galaxy.system(m.destination).name) != std::string::npos);
+    } else {
+      CHECK(m.count > 0);
+    }
+    // The same job every time
+    Mission again;
+    CHECK(MissionOffered(c, galaxy, &again));
+    CHECK(again.destination == m.destination && again.reward == m.reward);
+  }
+  Commander done = StartCommander();
+  done.story_step = kStorySteps;
+  Mission none;
+  CHECK(!MissionOffered(done, galaxy, &none));
+}
+
+void TheLastJobFitsAGalacticHyperdriveOrPaysForOne() {
+  const Galaxy galaxy(0);
+  Commander c = StartCommander();
+  c.story_step = kStorySteps - 1;
+  CHECK(MissionOffered(c, galaxy, &c.mission));
+  const std::int64_t cash = c.credits;
+  CHECK(MissionComplete(c.mission, c.mission.destination));
+  PayMission(c);
+  CHECK(c.equipment.galactic_hyperdrive && c.credits == cash && c.story_step == kStorySteps);
+  CHECK(c.mission.kind == MissionKind::kNone);
+
+  Commander d = StartCommander();
+  d.story_step = kStorySteps - 1;
+  d.equipment.galactic_hyperdrive = true;
+  CHECK(MissionOffered(d, galaxy, &d.mission));
+  PayMission(d);
+  CHECK(d.credits == 1000 + ItemPrice(Item::kGalacticHyperdrive));
+}
+
+void ADeliveryIsPaidOnDockingAtTheDestinationOnly() {
+  Game game(StartCommander(), 16);
+  Mission offer;
+  CHECK(game.MissionOnOffer(&offer));
+  CHECK(offer.kind == MissionKind::kDeliver && offer.step == 0);
+  CHECK(game.AcceptMission());
+  // One job at a time
+  CHECK(!game.MissionOnOffer(&offer));
+  CHECK(!game.AcceptMission());
+  const int destination = game.commander().mission.destination;
+  const std::int64_t cash = game.commander().credits;
+
+  // Docking back where it was taken does not finish it
+  CHECK(game.Launch(false));
+  CHECK(FlyBackAndDock(game));
+  CHECK(game.commander().mission.kind == MissionKind::kDeliver);
+  CHECK(game.commander().credits == cash && game.commander().story_step == 0);
+
+  // Docking at the destination does
+  CHECK(game.Launch(false));
+  game.commander().system = destination;
+  CHECK(FlyBackAndDock(game));
+  CHECK(game.commander().mission.kind == MissionKind::kNone);
+  CHECK(game.commander().story_step == 1);
+  CHECK(game.commander().credits == cash + 1500);
+  // The next job is on offer
+  CHECK(game.MissionOnOffer(&offer) && offer.step == 1);
+}
+
+void ShootingPiratesAndDockingPaysAHuntingJob() {
+  Commander c = StartCommander();
+  c.story_step = 1;
+  Game game(c, 17);
+  Mission offer;
+  CHECK(game.MissionOnOffer(&offer) && offer.kind == MissionKind::kHunt && offer.count == 3);
+  CHECK(game.AcceptMission());
+  CHECK(game.Launch(false));
+  const auto shoot = [&game](Team team) {
+    Entity* me = game.player();
+    const EntityId id = game.world().SpawnShip(Bp("mamba"), team, me->position + Vec3d{0, 0, 1500}, Quat{});
+    game.world().ApplyDamage(*game.world().Find(id), 1e6, me->id, me->position);
+    game.Update(FlightInput(), 0.1);
+  };
+  shoot(Team::kPirate);
+  shoot(Team::kTrader);  // only pirates count
+  shoot(Team::kPirate);
+  CHECK(game.commander().mission.progress == 2);
+  // Not enough yet: docking pays nothing
+  const std::int64_t cash = game.commander().credits;
+  shoot(Team::kPirate);
+  CHECK(game.commander().mission.progress == 3);
+  shoot(Team::kPirate);
+  CHECK(game.commander().mission.progress == 3);
+  const std::int64_t after_bounties = game.commander().credits;
+  CHECK(after_bounties > cash);
+  CHECK(FlyBackAndDock(game));
+  CHECK(game.commander().mission.kind == MissionKind::kNone && game.commander().story_step == 2);
+  CHECK(game.commander().credits == after_bounties + 4000);
+}
+
+void AJobCanBeGivenUpAndTheStoryAndJobAreSaved() {
+  Commander c = StartCommander();
+  Game game(c, 18);
+  CHECK(!game.AbandonMission());
+  CHECK(game.AcceptMission());
+  c = game.commander();
+  c.story_step = 3;
+  c.mission.step = 3;
+  c.mission.kind = MissionKind::kHunt;
+  c.mission.count = 8;
+  c.mission.progress = 5;
+  c.mission.destination = -1;
+  c.mission.reward = 20000;
+  Json json;
+  std::string error;
+  const std::string text = CommanderToJson(c).Dump();
+  CHECK(Json::Parse(text, &json, &error));
+  Commander back;
+  CHECK(CommanderFromJson(json, &back, &error));
+  CHECK(back.story_step == 3 && back.mission.kind == MissionKind::kHunt && back.mission.step == 3 &&
+        back.mission.count == 8 && back.mission.progress == 5 && back.mission.reward == 20000);
+
+  // A save from before the story had none of it
+  std::string old = text;
+  for (const char* key : {"\"story_step\"", "\"mission\""}) {
+    const std::size_t at = old.find(key);
+    CHECK(at != std::string::npos);
+    old.replace(at + 1, std::string(key).size() - 2, "unused");
+  }
+  CHECK(Json::Parse(old, &json, &error));
+  Commander older;
+  CHECK(CommanderFromJson(json, &older, &error));
+  CHECK(older.story_step == 0 && older.mission.kind == MissionKind::kNone);
+
+  // And giving it up offers it again
+  Game g2(StartCommander(), 19);
+  CHECK(g2.AcceptMission());
+  CHECK(g2.AbandonMission());
+  Mission offer;
+  CHECK(g2.MissionOnOffer(&offer) && offer.step == 0);
+}
+
 void SettingsOfFlightFromInput() {
   Game game(StartCommander(), 11);
   game.Launch(false);
@@ -2046,6 +2219,11 @@ int main() {
   TheCargoBayAndTheGalacticHyperdriveAreBoughtAndSaved();
   AGalacticJumpGoesToTheNextGalaxyAndUsesTheDrive();
   ShipsAreBoughtWithTheTradeInOfTheOldOne();
+  EveryStepOfTheStoryIsOfferedWithItsBriefing();
+  TheLastJobFitsAGalacticHyperdriveOrPaysForOne();
+  ADeliveryIsPaidOnDockingAtTheDestinationOnly();
+  ShootingPiratesAndDockingPaysAHuntingJob();
+  AJobCanBeGivenUpAndTheStoryAndJobAreSaved();
   SettingsOfFlightFromInput();
   MissileLockAndFire();
   FuelScoopingAndCanisters();

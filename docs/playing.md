@@ -66,6 +66,13 @@ high tech level.
 
 ![The shipyard](img/screens/shipyard.webp){ loading=lazy }
 
+The mission board offers jobs one after another, a story of five steps: carry a sealed packet to a nearby system, shoot
+down pirates, carry a second packet, break the pirate fleet, and carry the plans of a galactic hyperdrive to the engineer
+who will build one for you. Enter takes the job and Backspace gives it up. A delivery is paid when you dock at its
+destination, and a hunt when you dock at any station after shooting down enough pirates.
+
+![The mission board](img/screens/missions.webp){ loading=lazy }
+
 ![The galactic chart](img/screens/chart.webp){ loading=lazy }
 
 ![Data on a system](img/screens/system.webp){ loading=lazy }

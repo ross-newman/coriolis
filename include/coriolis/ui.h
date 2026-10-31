@@ -38,7 +38,7 @@ enum class UiKey {
 };
 
 /// Which screen is showing
-enum class Screen { kTitle, kStatus, kMarket, kEquipment, kShipyard, kChart, kSystem, kFlight, kDead };
+enum class Screen { kTitle, kStatus, kMarket, kEquipment, kShipyard, kMissions, kChart, kSystem, kFlight, kDead };
 
 /// The whole game as a player sees it, without a window: the title screen, the screens of the station (status, market,
 /// equipment, galactic chart, data on a system), the flight view, the pause menu and the end screen. It owns the game

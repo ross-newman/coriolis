@@ -24,6 +24,22 @@ struct Equipment {
   int laser_level = 0;
 };
 
+/// A job the pilot has taken: carry a packet to a system, or shoot down pirates. See missions.h.
+enum class MissionKind { kNone, kDeliver, kHunt };
+
+struct Mission {
+  MissionKind kind = MissionKind::kNone;
+  /// Which step of the story it is
+  int step = 0;
+  /// The system to deliver to, for a delivery
+  int destination = -1;
+  /// How many pirates to shoot down, and how many have been
+  int count = 0;
+  int progress = 0;
+  /// In tenths of a credit; 0 for the last step, which is paid in a hyperdrive
+  int reward = 0;
+};
+
 /// The player: money, fuel, cargo, standing with the law and kills. Everything that is saved.
 struct Commander {
   std::string name = "Commander";
@@ -45,6 +61,9 @@ struct Commander {
   std::uint32_t market_mood = 1;
   /// The id of the ship flown (a blueprint id)
   std::string ship = "cobra_mk3_trader";
+  /// The job under way, and the next step of the story to be offered (see missions.h)
+  Mission mission;
+  int story_step = 0;
 };
 
 constexpr double kMaxFuel = 7.0;
