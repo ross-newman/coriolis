@@ -1,10 +1,10 @@
-#include "open_elite/music.h"
+#include "coriolis/music.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -535,4 +535,4 @@ std::vector<std::int16_t> RenderStationTheme(int sample_rate) {
   return out;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

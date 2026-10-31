@@ -1,11 +1,11 @@
-#include "open_elite/ai.h"
+#include "coriolis/ai.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "open_elite/steering.h"
+#include "coriolis/steering.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -359,4 +359,4 @@ bool UpdateAutopilot(World& world, Entity& ship, double dt) {
   return true;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

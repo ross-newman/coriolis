@@ -1,4 +1,4 @@
-#include "open_elite/png.h"
+#include "coriolis/png.h"
 
 #include <algorithm>
 #include <array>
@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <vector>
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -99,4 +99,4 @@ bool WritePng(const Image& image, const std::string& path) {
   return std::fclose(f) == 0 && ok;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

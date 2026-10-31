@@ -5,10 +5,10 @@
 #include <cstdlib>
 #include <string>
 
-#include "open_elite/bot.h"
-#include "open_elite/commander.h"
-#include "open_elite/screens.h"
-#include "open_elite/ui.h"
+#include "coriolis/bot.h"
+#include "coriolis/commander.h"
+#include "coriolis/screens.h"
+#include "coriolis/ui.h"
 
 namespace {
 
@@ -22,7 +22,7 @@ int g_failures = 0;
     }                                                                                    \
   } while (false)
 
-using namespace open_elite;
+using namespace coriolis;
 
 std::size_t LitAll(const Image& image) {
   std::size_t n = 0;
@@ -257,7 +257,7 @@ void TheTractorBeamLandsTheShipAndThenTheStationScreensCome() {
 }
 
 void AFullRoundTripSavesAndContinues() {
-  const std::string path = "/tmp/open_elite_ui_test_save.json";
+  const std::string path = "/tmp/coriolis_ui_test_save.json";
   std::remove(path.c_str());
   // The computer pilot can be shot down by a pirate before it gets back, as a person can: so try a few seeds
   bool round_trip = false;
@@ -304,7 +304,7 @@ void AFullRoundTripSavesAndContinues() {
 }
 
 void ExplicitSaveInTheStation() {
-  const std::string path = "/tmp/open_elite_ui_test_save2.json";
+  const std::string path = "/tmp/coriolis_ui_test_save2.json";
   std::remove(path.c_str());
   GameUi ui(path, 3);
   ui.Key(UiKey::kAccept);

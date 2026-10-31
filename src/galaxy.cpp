@@ -1,4 +1,4 @@
-#include "open_elite/galaxy.h"
+#include "coriolis/galaxy.h"
 
 #include <algorithm>
 #include <cctype>
@@ -6,9 +6,9 @@
 #include <set>
 #include <utility>
 
-#include "open_elite/random.h"
+#include "coriolis/random.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -146,4 +146,4 @@ int Galaxy::Nearest(int x, int y) const {
   return best;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

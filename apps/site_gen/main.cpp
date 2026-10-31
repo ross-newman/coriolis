@@ -4,7 +4,7 @@
 //
 // The Markdown pages for the ships, stations, things for sale, trade goods and worlds are written into the --docs
 // directory (default docs), with every number taken from the game itself. The pictures are written as PNG files into
-// the --png directory (default /tmp/open_elite_site): a picture of every ship, thing for sale and trade good, a portrait
+// the --png directory (default /tmp/coriolis_site): a picture of every ship, thing for sale and trade good, a portrait
 // of a selection of planets, the station screens and some moments of play. tools/make_site.sh runs this, turns the
 // pictures into compact WebP files in docs/img and builds the site.
 
@@ -22,23 +22,23 @@
 #include <utility>
 #include <vector>
 
-#include "open_elite/asteroids.h"
-#include "open_elite/blueprint.h"
-#include "open_elite/bot.h"
-#include "open_elite/cockpit.h"
-#include "open_elite/commander.h"
-#include "open_elite/commodity_models.h"
-#include "open_elite/equipment_models.h"
-#include "open_elite/galaxy.h"
-#include "open_elite/game.h"
-#include "open_elite/market.h"
-#include "open_elite/png.h"
-#include "open_elite/renderer.h"
-#include "open_elite/screens.h"
-#include "open_elite/ships.h"
-#include "open_elite/ui.h"
+#include "coriolis/asteroids.h"
+#include "coriolis/blueprint.h"
+#include "coriolis/bot.h"
+#include "coriolis/cockpit.h"
+#include "coriolis/commander.h"
+#include "coriolis/commodity_models.h"
+#include "coriolis/equipment_models.h"
+#include "coriolis/galaxy.h"
+#include "coriolis/game.h"
+#include "coriolis/market.h"
+#include "coriolis/png.h"
+#include "coriolis/renderer.h"
+#include "coriolis/screens.h"
+#include "coriolis/ships.h"
+#include "coriolis/ui.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 namespace {
 
@@ -763,7 +763,7 @@ bool WritePlanetsPage(const std::string& docs, const std::vector<WorldInfo>& wor
 
 int main(int argc, char** argv) {
   std::string docs = "docs";
-  std::string png = "/tmp/open_elite_site";
+  std::string png = "/tmp/coriolis_site";
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--docs" && i + 1 < argc) {

@@ -1,11 +1,11 @@
-#include "open_elite/sound.h"
+#include "coriolis/sound.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "open_elite/music.h"
+#include "coriolis/music.h"
 
-namespace open_elite {
+namespace coriolis {
 
 SoundMixer::SoundMixer(int sample_rate, std::uint32_t seed) : sample_rate_(std::max(8000, sample_rate)) {
   AdLibSynth synth(seed, sample_rate_);
@@ -116,4 +116,4 @@ void SoundMixer::Mix(std::int16_t* out, std::size_t frames) {
   }
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

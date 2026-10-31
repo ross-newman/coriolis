@@ -1,11 +1,11 @@
-#include "open_elite/steering.h"
+#include "coriolis/steering.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "open_elite/types.h"
+#include "coriolis/types.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 constexpr double kHalfPi = 1.5707963267948966;
@@ -102,4 +102,4 @@ double AngleBetween(const Vec3d& a, const Vec3d& b) {
   return std::acos(Clamp(Dot(a, b) / (la * lb), -1.0, 1.0));
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

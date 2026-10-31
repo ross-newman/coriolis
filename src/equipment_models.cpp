@@ -1,12 +1,12 @@
-#include "open_elite/equipment_models.h"
+#include "coriolis/equipment_models.h"
 
 #include <cmath>
 
-#include "open_elite/model_builder.h"
-#include "open_elite/model_parts.h"
-#include "open_elite/ships.h"
+#include "coriolis/model_builder.h"
+#include "coriolis/model_parts.h"
+#include "coriolis/ships.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -213,4 +213,4 @@ const std::vector<Model>& AllItemModels() {
 
 const Model& GetItemModel(Item item) { return AllItemModels()[static_cast<std::size_t>(item)]; }
 
-}  // namespace open_elite
+}  // namespace coriolis

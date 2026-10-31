@@ -1,4 +1,6 @@
-# Open Elite
+# Coriolis
+
+![Coriolis](img/coriolis.png){ width="360" style="display: block; margin: 0 auto;" }
 
 ![A ringed gas giant](img/screens/hero.webp)
 
@@ -31,7 +33,7 @@ keyboard and Xbox controller support.
 cmake -S . -B build
 cmake --build build -j
 ctest --test-dir build
-./build/open_elite_game
+./build/coriolis_game
 ```
 
 ## The models and the original game

@@ -9,21 +9,21 @@
 #include <set>
 #include <string>
 
-#include "open_elite/ai.h"
-#include "open_elite/asteroids.h"
-#include "open_elite/blueprint.h"
-#include "open_elite/bot.h"
-#include "open_elite/commander.h"
-#include "open_elite/galaxy.h"
-#include "open_elite/game.h"
-#include "open_elite/json.h"
-#include "open_elite/market.h"
-#include "open_elite/math.h"
-#include "open_elite/renderer.h"
-#include "open_elite/ships.h"
-#include "open_elite/spawner.h"
-#include "open_elite/steering.h"
-#include "open_elite/world.h"
+#include "coriolis/ai.h"
+#include "coriolis/asteroids.h"
+#include "coriolis/blueprint.h"
+#include "coriolis/bot.h"
+#include "coriolis/commander.h"
+#include "coriolis/galaxy.h"
+#include "coriolis/game.h"
+#include "coriolis/json.h"
+#include "coriolis/market.h"
+#include "coriolis/math.h"
+#include "coriolis/renderer.h"
+#include "coriolis/ships.h"
+#include "coriolis/spawner.h"
+#include "coriolis/steering.h"
+#include "coriolis/world.h"
 
 namespace {
 
@@ -37,7 +37,7 @@ int g_failures = 0;
     }                                                                                    \
   } while (false)
 
-using namespace open_elite;
+using namespace coriolis;
 
 bool Near(double a, double b, double tolerance = 1e-6) { return std::fabs(a - b) <= tolerance; }
 bool NearV(const Vec3d& a, const Vec3d& b, double tolerance = 1e-6) { return Distance(a, b) <= tolerance; }
@@ -180,7 +180,7 @@ void BadBlueprintsAreRejected() {
   CHECK(!mutate("\"id\": \"viper\"", "\"id\": \"Vi per\""));
   CHECK(!mutate("\"kind\": \"ship\"", "\"kind\": \"boat\""));
   CHECK(!mutate("\"version\": 1", "\"version\": 2"));
-  CHECK(!mutate("\"format\": \"open-elite-blueprint\"", "\"format\": \"other\""));
+  CHECK(!mutate("\"format\": \"coriolis-blueprint\"", "\"format\": \"other\""));
   CHECK(!mutate("\"hull\": 120", "\"hull\": -5"));
 
   Blueprint broken = Bp("viper");
@@ -195,7 +195,7 @@ void BadBlueprintsAreRejected() {
 }
 
 void BlueprintFilesSaveAndLoad() {
-  const std::string path = "open_elite_test_blueprint.json";
+  const std::string path = "coriolis_test_blueprint.json";
   std::string error;
   CHECK(SaveBlueprintFile(Bp("anaconda"), path, &error));
   Blueprint back;
@@ -1079,7 +1079,7 @@ void CommandersSaveAndLoad() {
   CHECK(!back.equipment.fuel_scoop && back.legal_status == 17 && back.kills == 131.5 && back.market_mood == 77);
   CHECK(back.ship == "python");
 
-  const std::string path = "open_elite_test_commander.json";
+  const std::string path = "coriolis_test_commander.json";
   CHECK(SaveCommander(c, path, &error));
   Commander loaded;
   CHECK(LoadCommander(path, &loaded, &error));
@@ -1102,7 +1102,7 @@ void CommandersSaveAndLoad() {
   CHECK(!bad("\"system\": 99", "\"system\": 256"));
   CHECK(!bad("\"missiles\": 2", "\"missiles\": 500"));
   CHECK(!bad("\"legal_status\": 17", "\"legal_status\": -1"));
-  CHECK(!bad("\"format\": \"open-elite-commander\"", "\"format\": \"x\""));
+  CHECK(!bad("\"format\": \"coriolis-commander\"", "\"format\": \"x\""));
   CHECK(!bad("\"ecm\": true", "\"ecm\": 1"));
   CHECK(!CommanderFromJson(Json::MakeArray(), &back, &error));
 }

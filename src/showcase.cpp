@@ -1,11 +1,11 @@
-#include "open_elite/showcase.h"
+#include "coriolis/showcase.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "open_elite/ships.h"
+#include "coriolis/ships.h"
 
-namespace open_elite {
+namespace coriolis {
 
 std::size_t Showcase::ShipAt(double elapsed_seconds) const {
   if (options_.fixed_ship >= 0) {
@@ -25,4 +25,4 @@ void Showcase::Render(Image& image, double elapsed_seconds) const {
   DrawCaption(image, ship.name);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

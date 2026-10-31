@@ -1,4 +1,4 @@
-#include "open_elite/blueprint.h"
+#include "coriolis/blueprint.h"
 
 #include <cmath>
 #include <cstdio>
@@ -8,7 +8,7 @@
 #include <sstream>
 #include <utility>
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -525,7 +525,7 @@ std::vector<std::string> ValidateBlueprint(const Blueprint& b) {
 
 Json BlueprintToJson(const Blueprint& b) {
   Json root = Json::MakeObject();
-  root.Set("format", Json::String("open-elite-blueprint"));
+  root.Set("format", Json::String("coriolis-blueprint"));
   root.Set("version", Json::Number(kBlueprintVersion));
   root.Set("id", Json::String(b.id));
   root.Set("name", Json::String(b.name));
@@ -620,8 +620,8 @@ bool BlueprintFromJson(const Json& json, Blueprint* out, std::string* error) {
   if (format == nullptr) {
     return false;
   }
-  if (!format->is_string() || format->string_value() != "open-elite-blueprint") {
-    return r.Fail("format", "not an open-elite-blueprint file");
+  if (!format->is_string() || format->string_value() != "coriolis-blueprint") {
+    return r.Fail("format", "not an coriolis-blueprint file");
   }
   const Json* version = r.Require(json, "blueprint", "version");
   if (version == nullptr) {
@@ -787,4 +787,4 @@ Blueprint BlueprintFromModel(const Model& model, const std::string& id) {
   return b;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

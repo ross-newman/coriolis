@@ -6,10 +6,10 @@
 #include <cstdio>
 #include <string>
 
-#include "open_elite/input.h"
-#include "open_elite/sdl_gamepad.h"
+#include "coriolis/input.h"
+#include "coriolis/sdl_gamepad.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 namespace {
 

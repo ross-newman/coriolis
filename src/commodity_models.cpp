@@ -1,11 +1,11 @@
-#include "open_elite/commodity_models.h"
+#include "coriolis/commodity_models.h"
 
 #include <cmath>
 
-#include "open_elite/model_builder.h"
-#include "open_elite/model_parts.h"
+#include "coriolis/model_builder.h"
+#include "coriolis/model_parts.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -396,4 +396,4 @@ const std::vector<Model>& AllCommodityModels() {
 
 const Model& GetCommodityModel(Commodity item) { return AllCommodityModels()[static_cast<std::size_t>(item)]; }
 
-}  // namespace open_elite
+}  // namespace coriolis

@@ -1,14 +1,14 @@
-#include "open_elite/world.h"
+#include "coriolis/world.h"
 
 #include <algorithm>
 #include <cmath>
 #include <iterator>
 
-#include "open_elite/ai.h"
-#include "open_elite/market.h"
-#include "open_elite/steering.h"
+#include "coriolis/ai.h"
+#include "coriolis/market.h"
+#include "coriolis/steering.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -813,4 +813,4 @@ void World::Step(double dt) {
   stepping_ = false;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

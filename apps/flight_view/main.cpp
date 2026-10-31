@@ -9,13 +9,13 @@
 #include <cstring>
 #include <string>
 
-#include "open_elite/bot.h"
-#include "open_elite/cockpit.h"
-#include "open_elite/game.h"
-#include "open_elite/png.h"
-#include "open_elite/screens.h"
+#include "coriolis/bot.h"
+#include "coriolis/cockpit.h"
+#include "coriolis/game.h"
+#include "coriolis/png.h"
+#include "coriolis/screens.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 namespace {
 

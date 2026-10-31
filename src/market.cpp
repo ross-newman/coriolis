@@ -1,10 +1,10 @@
-#include "open_elite/market.h"
+#include "coriolis/market.h"
 
 #include <algorithm>
 
-#include "open_elite/random.h"
+#include "coriolis/random.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -63,4 +63,4 @@ Market Market::ForSystem(const StarSystem& system, std::uint32_t mood) {
   return m;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

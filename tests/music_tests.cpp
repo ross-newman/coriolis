@@ -7,9 +7,9 @@
 #include <cstdlib>
 #include <vector>
 
-#include "open_elite/music.h"
-#include "open_elite/sound.h"
-#include "open_elite/ui.h"
+#include "coriolis/music.h"
+#include "coriolis/sound.h"
+#include "coriolis/ui.h"
 
 namespace {
 
@@ -23,7 +23,7 @@ int g_failures = 0;
     }                                                                                    \
   } while (false)
 
-using namespace open_elite;
+using namespace coriolis;
 
 double Rms(const std::vector<std::int16_t>& s, std::size_t from, std::size_t to) {
   double sum = 0.0;

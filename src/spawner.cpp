@@ -1,9 +1,9 @@
-#include "open_elite/spawner.h"
+#include "coriolis/spawner.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -174,4 +174,4 @@ void Spawner::Update(World& world, const StarSystem& system, double dt, double k
   }
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

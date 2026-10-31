@@ -1,11 +1,11 @@
-#include "open_elite/json.h"
+#include "coriolis/json.h"
 
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <utility>
 
-namespace open_elite {
+namespace coriolis {
 
 Json Json::Bool(bool value) {
   Json j;
@@ -518,4 +518,4 @@ std::string Json::Dump() const {
 
 bool Json::Parse(const std::string& text, Json* out, std::string* error) { return Parser(text).Run(out, error); }
 
-}  // namespace open_elite
+}  // namespace coriolis

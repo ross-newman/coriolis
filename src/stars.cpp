@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <array>
 
-#include "open_elite/hash.h"
-#include "open_elite/renderer.h"
+#include "coriolis/hash.h"
+#include "coriolis/renderer.h"
 
-namespace open_elite {
+namespace coriolis {
 
 void DrawStars(Image& image, std::uint32_t frame) {
   const std::uint32_t width = image.width();
@@ -64,4 +64,4 @@ void DrawStars(Image& image, std::uint32_t frame) {
   }
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

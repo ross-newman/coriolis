@@ -2,14 +2,14 @@
 // are carried over from that code (which is under the licence in the root of that project) with the Qt and audio
 // device parts taken out. The effects from kMissile on were written for this game in the same style.
 
-#include "open_elite/adlib_synth.h"
+#include "coriolis/adlib_synth.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
 #include "adlib_design.h"
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -353,4 +353,4 @@ std::vector<std::int16_t> AdLibSynth::Ecm() {
   });
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

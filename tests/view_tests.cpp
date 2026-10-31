@@ -5,10 +5,10 @@
 #include <cstdio>
 #include <string>
 
-#include "open_elite/cockpit.h"
-#include "open_elite/game.h"
-#include "open_elite/renderer.h"
-#include "open_elite/screens.h"
+#include "coriolis/cockpit.h"
+#include "coriolis/game.h"
+#include "coriolis/renderer.h"
+#include "coriolis/screens.h"
 
 namespace {
 
@@ -22,7 +22,7 @@ int g_failures = 0;
     }                                                                                    \
   } while (false)
 
-using namespace open_elite;
+using namespace coriolis;
 
 /// Pixels in a block that are not black
 std::size_t Lit(const Image& image, std::uint32_t x0, std::uint32_t y0, std::uint32_t x1, std::uint32_t y1) {

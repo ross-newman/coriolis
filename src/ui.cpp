@@ -1,4 +1,4 @@
-#include "open_elite/ui.h"
+#include "coriolis/ui.h"
 
 #include <algorithm>
 #include <cctype>
@@ -8,13 +8,13 @@
 #include <utility>
 #include <vector>
 
-#include "open_elite/blueprint.h"
-#include "open_elite/commander.h"
-#include "open_elite/hash.h"
-#include "open_elite/renderer.h"
-#include "open_elite/screens.h"
+#include "coriolis/blueprint.h"
+#include "coriolis/commander.h"
+#include "coriolis/hash.h"
+#include "coriolis/renderer.h"
+#include "coriolis/screens.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -35,6 +35,152 @@ void FillRows(Image& image, std::int64_t y0, std::int64_t y1, Rgb colour) {
   for (std::int64_t y = y0; y < y1; ++y) {
     for (std::int64_t x = 0; x < static_cast<std::int64_t>(image.width()); ++x) {
       image.Set(x, y, colour);
+    }
+  }
+}
+
+struct Pt {
+  double x;
+  double y;
+};
+
+/// A line of points with each corner rounded by a curve of radius r. An end of an open line may give up its whole
+/// length to a corner, any other side only half of it.
+std::vector<Pt> Rounded(const std::vector<Pt>& v, double r, bool closed) {
+  std::vector<Pt> out;
+  const std::size_t n = v.size();
+  for (std::size_t i = 0; i < n; ++i) {
+    if (!closed && (i == 0 || i + 1 == n)) {
+      out.push_back(v[i]);
+      continue;
+    }
+    const std::size_t ia = (i + n - 1) % n;
+    const std::size_t ib = (i + 1) % n;
+    const Pt c = v[i];
+    auto toward = [&](std::size_t j) {
+      const double dx = v[j].x - c.x;
+      const double dy = v[j].y - c.y;
+      const double len = std::hypot(dx, dy);
+      const bool whole = !closed && (j == 0 || j + 1 == n);
+      const double d = std::min(r, len * (whole ? 1.0 : 0.5));
+      return Pt{c.x + dx / len * d, c.y + dy / len * d};
+    };
+    const Pt p1 = toward(ia);
+    const Pt p2 = toward(ib);
+    for (int k = 0; k <= 8; ++k) {
+      const double t = k / 8.0;
+      const double a = (1 - t) * (1 - t);
+      const double b = 2 * t * (1 - t);
+      const double d = t * t;
+      out.push_back({a * p1.x + b * c.x + d * p2.x, a * p1.y + b * c.y + d * p2.y});
+    }
+  }
+  if (closed && !out.empty()) {
+    out.push_back(out.front());
+  }
+  return out;
+}
+
+/// A round ended stroke from a to b, anti-aliased, its colour fading from top to bottom between the rows y0 and y1
+void StrokeLine(Image& image, Pt a, Pt b, double radius, Rgb top, Rgb bottom, double y0, double y1) {
+  const std::int64_t w = static_cast<std::int64_t>(image.width());
+  const std::int64_t h = static_cast<std::int64_t>(image.height());
+  const std::int64_t xa = std::max<std::int64_t>(0, static_cast<std::int64_t>(std::floor(std::min(a.x, b.x) - radius - 1)));
+  const std::int64_t xb = std::min<std::int64_t>(w - 1, static_cast<std::int64_t>(std::ceil(std::max(a.x, b.x) + radius + 1)));
+  const std::int64_t ya = std::max<std::int64_t>(0, static_cast<std::int64_t>(std::floor(std::min(a.y, b.y) - radius - 1)));
+  const std::int64_t yb = std::min<std::int64_t>(h - 1, static_cast<std::int64_t>(std::ceil(std::max(a.y, b.y) + radius + 1)));
+  const double dx = b.x - a.x;
+  const double dy = b.y - a.y;
+  const double len2 = dx * dx + dy * dy;
+  for (std::int64_t y = ya; y <= yb; ++y) {
+    for (std::int64_t x = xa; x <= xb; ++x) {
+      const double px = x + 0.5;
+      const double py = y + 0.5;
+      const double u = len2 > 0 ? std::clamp(((px - a.x) * dx + (py - a.y) * dy) / len2, 0.0, 1.0) : 0.0;
+      const double d = std::hypot(px - (a.x + u * dx), py - (a.y + u * dy));
+      const double cover = std::clamp(radius + 0.5 - d, 0.0, 1.0);
+      if (cover <= 0) {
+        continue;
+      }
+      const double f = y1 > y0 ? std::clamp((py - y0) / (y1 - y0), 0.0, 1.0) : 0.0;
+      std::uint8_t* p = image.data() + (static_cast<std::size_t>(y) * image.width() + static_cast<std::size_t>(x)) * 3;
+      const double c[3] = {top.r + (bottom.r - top.r) * f, top.g + (bottom.g - top.g) * f,
+                           top.b + (bottom.b - top.b) * f};
+      for (int i = 0; i < 3; ++i) {
+        p[i] = static_cast<std::uint8_t>(p[i] + (c[i] - p[i]) * cover);
+      }
+    }
+  }
+}
+
+/// One letter of the title as strokes, in units where the letter is 1 high; width is how wide it is
+struct Letter {
+  double width;
+  std::vector<std::vector<Pt>> strokes;
+};
+
+Letter TitleLetter(char c) {
+  const double r = 0.26;
+  switch (c) {
+    case 'C': {
+      const double w = 0.95;
+      return {w, {Rounded({{w, 0.34}, {w, 0}, {0, 0}, {0, 1}, {w, 1}, {w, 0.66}}, r, false)}};
+    }
+    case 'O': {
+      const double w = 1.0;
+      return {w, {Rounded({{0, 0}, {w, 0}, {w, 1}, {0, 1}}, r, true)}};
+    }
+    case 'R': {
+      const double w = 0.9;
+      return {w,
+              {Rounded({{0, 1}, {0, 0}, {w, 0}, {w, 0.55}, {0, 0.55}}, r, false), {{0.4 * w, 0.55}, {w, 1}}}};
+    }
+    case 'L': {
+      const double w = 0.8;
+      return {w, {Rounded({{0, 0}, {0, 1}, {w, 1}}, 0.12, false)}};
+    }
+    case 'S': {
+      const double w = 0.9;
+      return {w,
+              {Rounded({{w, 0.26}, {w, 0}, {0, 0}, {0, 0.5}, {w, 0.5}, {w, 1}, {0, 1}, {0, 0.74}}, 0.22, false)}};
+    }
+    default:  // I
+      return {0.0, {{{0, 0}, {0, 1}}}};
+  }
+}
+
+/// The word CORIOLIS in wide, rounded, gold letters like the logo, centred, with its top at y and about the given
+/// height, made smaller if it would not fit across 90% of the picture. Drawn from strokes, so it is the same shape at
+/// any size and needs no font.
+void DrawLogoTitle(Image& image, std::int64_t y, std::int64_t height) {
+  const char* word = "CORIOLIS";
+  const double weight = 0.15;
+  const double gap = 0.5;
+  std::vector<Letter> letters;
+  double units = 0;
+  for (const char* p = word; *p != '\0'; ++p) {
+    letters.push_back(TitleLetter(*p));
+    units += letters.back().width + (p == word ? 0.0 : gap);
+  }
+  const double s = std::min(height / (1.0 + weight), 0.9 * image.width() / (units + weight));
+  const double radius = 0.5 * weight * s;
+  const double left = (image.width() - units * s) / 2.0;
+  const double top = y + radius + (height - (1.0 + weight) * s) / 2.0;
+  const double y1 = top + s;
+  for (int pass = 0; pass < 2; ++pass) {
+    const double shift = pass == 0 ? 0.05 * s : 0.0;
+    const Rgb a = pass == 0 ? Rgb{90, 55, 10} : Rgb{255, 238, 150};
+    const Rgb b = pass == 0 ? Rgb{90, 55, 10} : Rgb{200, 140, 30};
+    double x = left;
+    for (const Letter& letter : letters) {
+      for (const std::vector<Pt>& line : letter.strokes) {
+        for (std::size_t i = 0; i + 1 < line.size(); ++i) {
+          const Pt p{x + line[i].x * s + shift, top + line[i].y * s + shift};
+          const Pt q{x + line[i + 1].x * s + shift, top + line[i + 1].y * s + shift};
+          StrokeLine(image, p, q, radius, a, b, top - radius, y1 + radius);
+        }
+      }
+      x += (letter.width + gap) * s;
     }
   }
 }
@@ -813,7 +959,7 @@ void GameUi::DrawTitle(Image& image) {
   }
   const TextSizes sizes = SizesFor(image);
   const std::uint32_t big = sizes.heading;
-  DrawCentredFit(image, "OPEN ELITE", h * 6 / 100, big, kTitleColour);
+  DrawLogoTitle(image, h * 6 / 100, static_cast<std::int64_t>(7 * big));
   const std::uint32_t small = sizes.small;
   DrawCentred(image, "A SPACE TRADING AND DOGFIGHT GAME", h * 6 / 100 + static_cast<std::int64_t>(9 * big), small,
               kDim);
@@ -1092,4 +1238,4 @@ void GameUi::Draw(Image& image) {
   }
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

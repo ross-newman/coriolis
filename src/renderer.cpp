@@ -1,11 +1,11 @@
-#include "open_elite/renderer.h"
+#include "coriolis/renderer.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <vector>
 
-namespace open_elite {
+namespace coriolis {
 
 void Renderer::DrawShip(Image& image, const Model& model, float angle) const {
   const std::uint32_t width = image.width();
@@ -194,4 +194,4 @@ void Renderer::DrawShip(Image& image, const Model& model, float angle) const {
   }
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

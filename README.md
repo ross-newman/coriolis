@@ -1,4 +1,8 @@
-# open-elite
+<p align="center">
+  <img src="docs/img/coriolis.png" alt="Coriolis" width="360">
+</p>
+
+# Coriolis
 
 The start of an open source version of the space trading game Elite.
 
@@ -19,20 +23,20 @@ versions, with a small software rasteriser into an RGB picture. It was extracted
 | Part | Where | What it does |
 | --- | --- | --- |
 | Ship models | `src/ships.cpp` | The 36 ships, built from vertices and polygons with `ModelBuilder` |
-| Model builder | `include/open_elite/model_builder.h` | Helpers for hulls, rings, bands, fans, boxes; recentres and scales a ship |
+| Model builder | `include/coriolis/model_builder.h` | Helpers for hulls, rings, bands, fans, boxes; recentres and scales a ship |
 | Renderer | `src/renderer.cpp` | Perspective projection, depth buffer, flat shading with a highlight, outlined edges, supersampling |
 | Star field | `src/stars.cpp` | Three layers of stars drifting at different speeds, twinkling |
 | Text | `src/text.cpp` | A vector stroke font (capitals, digits, lower case) drawn as smooth anti-aliased lines at any size |
 | Showcase | `src/showcase.cpp` | Each ship in turn (30 seconds each by default), driven by elapsed time |
 | PNG writer | `src/png.cpp` | Writes a picture as an uncompressed PNG, so there are no dependencies |
 | Ship viewer | `apps/ship_viewer` | Draws the ships to PNG files |
-| Game engine | `include/open_elite/game.h` and others | See [The game engine](#the-game-engine) |
+| Game engine | `include/coriolis/game.h` and others | See [The game engine](#the-game-engine) |
 | Engine demo | `apps/engine_demo` | A computer pilot plays the game and prints what happens |
 | Cockpit | `cockpit.h`, `src/cockpit.cpp` | The flight view: a clear view out of the ship (stars, planet and sun, solid ships and stations, bolts, explosions, target brackets) over the top four fifths, and a 3D console in the bottom fifth with a ship systems screen, a 3D scanner and a navigation screen, painted in the colours of the player's ship |
 | Screens | `screens.h` | The station screens: status, market, equipment (with a 3D model of the item), galactic chart, data on a system |
 | Game UI | `ui.h`, `src/ui.cpp` | The title, the station screens with buying and selling, the chart, flight, pause and saving, with no window so it can be tested |
 | Flight view | `apps/flight_view` | The computer pilot plays and the cockpit and screens are saved as PNG files |
-| The game | `apps/play` | The game in a window (SDL2): `open_elite_game` |
+| The game | `apps/play` | The game in a window (SDL2): `coriolis_game` |
 | Sound | `adlib_synth.h`, `sound.h` | An AdLib style FM synthesizer with the game's sound design (52 effects and an engine drone; 12 are the original's), and a mixer; `apps/sound_demo` writes the effects as WAV files |
 
 The library has no dependencies beyond a C++17 compiler and CMake.
@@ -47,12 +51,12 @@ ctest --test-dir build
 
 ## Playing
 
-With SDL2 installed (`libsdl2-dev`) the build makes `open_elite_game`:
+With SDL2 installed (`libsdl2-dev`) the build makes `coriolis_game`:
 
 ```bash
-./build/open_elite_game                      # 960x540, saves to ~/.open_elite_save.json
-./build/open_elite_game --size 1280x720 --quality 2 --fullscreen
-./build/open_elite_game --no-save --seed 7   # no saving, the same galaxy of traffic
+./build/coriolis_game                      # 960x540, saves to ~/.coriolis_save.json
+./build/coriolis_game --size 1280x720 --quality 2 --fullscreen
+./build/coriolis_game --no-save --seed 7   # no saving, the same galaxy of traffic
 ```
 
 `--size` is the size the game is drawn at (it is scaled to the window), `--quality 1-4` draws that many times bigger and
@@ -107,30 +111,30 @@ looks like without a window:
 ./build/ship_viewer --asteroids 6 --size 1200x800 --out /tmp      # a sheet of generated asteroids, asteroids.png
 ```
 
-`LoadObj()` in `open_elite/obj.h` reads an OBJ file into a `Model` (vertices, faces of any size, and the `Kd`/`Ke`
+`LoadObj()` in `coriolis/obj.h` reads an OBJ file into a `Model` (vertices, faces of any size, and the `Kd`/`Ke`
 colours of its `.mtl`). It assumes the usual "Y up, -Z forward" export and turns it into the nose-along-+z of the
 ships here; `--keep-z` leaves the axes alone and `--flip-winding` turns the faces round. Only use models whose licence
 lets you do so: none are bundled.
 
 ## The things for sale
 
-`GetItemModel(Item)` in `open_elite/equipment_models.h` gives a 3D model, in the style of the ships, of everything on
+`GetItemModel(Item)` in `coriolis/equipment_models.h` gives a 3D model, in the style of the ships, of everything on
 the equipment screen: the fuel tank, missile, E.C.M. unit, escape pod, fuel scoop, energy bomb, docking computer, and
 the beam and military lasers. The missile and escape pod are the ship models; the rest are made for the screen, which
 draws the highlighted item under the list.
 
 ## Trade goods
 
-`GetCommodityModel(Commodity)` in `open_elite/commodity_models.h` gives a 3D model of each of the 17 trade goods: a crate
+`GetCommodityModel(Commodity)` in `coriolis/commodity_models.h` gives a 3D model of each of the 17 trade goods: a crate
 of food, rolls of textiles, a hazard-striped barrel of radioactives, a cage, a bottle of liquor, a gift box, a pill
 bottle, a monitor, a gear, a bundle of alloy rods, a rifle, a pelt, mineral crystals, stacked gold and platinum bars, a cut
 gem and a glowing alien relic. The market screen draws the highlighted good to the right of the list when the picture
 is wide enough. `ship_viewer --goods --out DIR` draws them all. The parts they are built from (tubes, balls, plates,
-crystals) are in `open_elite/model_parts.h`.
+crystals) are in `coriolis/model_parts.h`.
 
 ## Asteroids
 
-`open_elite/asteroids.h` makes asteroids from a seed: a split 20 sided shape pushed in and out by lumps, craters and
+`coriolis/asteroids.h` makes asteroids from a seed: a split 20 sided shape pushed in and out by lumps, craters and
 bumps, then stretched and flattened, in rocky, metallic, icy or dark colours. There are five size classes, from
 splinters of 8 metres to giants of nearly a kilometre. The blueprint's size, mass, hull and the minerals it drops come
 from the radius and type. Each system has its own asteroid field, the same every visit, with debris round the big
@@ -139,11 +143,11 @@ rocks; the spawner keeps the rocks it has made in an `AsteroidCatalog`.
 ## Using the library
 
 ```cpp
-#include "open_elite/png.h"
-#include "open_elite/renderer.h"
-#include "open_elite/ships.h"
+#include "coriolis/png.h"
+#include "coriolis/renderer.h"
+#include "coriolis/ships.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 Image image(1280, 720);
 DrawStars(image, /*frame=*/0);
@@ -227,9 +231,9 @@ Try it. The bot plays twelve minutes, jumping between systems, fighting pirates 
 The game is driven like this:
 
 ```cpp
-#include "open_elite/game.h"
+#include "coriolis/game.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 Commander commander;                    // 100 Cr, a Cobra Mk III trader, in the first galaxy
 Game game(commander, /*seed=*/1);
@@ -245,7 +249,7 @@ while (game.mode() == GameMode::kFlight) {
 
 ## Controllers
 
-Xbox 360, Xbox One and Xbox Elite (and Elite Series 2) controllers are supported. `include/open_elite/input.h`
+Xbox 360, Xbox One and Xbox Elite (and Elite Series 2) controllers are supported. `include/coriolis/input.h`
 turns a controller reading (`GamepadState`) into flight input (`FlightInput`: pitch, roll, yaw, throttle and
 press/release of actions) with a circular dead zone, a response curve, trigger hysteresis and hold-to-confirm
 buttons. It does not depend on SDL, so it is tested without a controller. The Xbox 360 pad gets a bigger dead zone,
@@ -265,7 +269,7 @@ and the Elite paddles are bound to the actions a pilot needs without lifting a t
 
 `src/sdl_gamepad.cpp` reads the controller through SDL3 (hot plugging, rumble, Elite detection by its paddles). It is
 built when CMake finds SDL3 (`libsdl3-dev`, or set `SDL3_DIR`), together with `gamepad_test`, which prints what the
-game sees from the pad. The game window itself (`open_elite_game`) reads the controller through SDL2's game controller
+game sees from the pad. The game window itself (`coriolis_game`) reads the controller through SDL2's game controller
 interface instead, with the same `InputMapper`, hot plugging, rumble on hits and Elite detection:
 
 ```bash
@@ -328,8 +332,8 @@ decides what your shots sound like, other ships' shots and explosions are quiete
 silent past 9 km, and what the game says (a mass lock, a refusal, a new rank) has its own sound.
 
 ```bash
-./build/open_elite_game --volume 50      # half volume
-./build/open_elite_game --no-sound
+./build/coriolis_game --volume 50      # half volume
+./build/coriolis_game --no-sound
 ./build/sound_demo --out /tmp/sounds     # every effect as a WAV file, to listen to
 ```
 
@@ -348,7 +352,7 @@ ship blueprint tables.
 
 ## Licence
 
-Not chosen yet. Note that `include/open_elite/adlib_synth.h` and `src/adlib_synth.cpp` carry over code that is
+Not chosen yet. Note that `include/coriolis/adlib_synth.h` and `src/adlib_synth.cpp` carry over code that is
 Copyright (c) 2026 Astute Systems PTY LTD from the Atlas project, whose files say they are licensed under that project's
 commercial licence; the notice is kept at the top of both files. The licence of this project has to be chosen with that
 in mind.

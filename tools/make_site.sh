@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-png=${PNG_DIR:-/tmp/open_elite_site}
+png=${PNG_DIR:-/tmp/coriolis_site}
 
 cmake -S . -B build > /dev/null
 cmake --build build -j --target site_gen

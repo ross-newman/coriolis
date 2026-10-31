@@ -12,7 +12,7 @@
 #include <array>
 #include <cmath>
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -627,4 +627,4 @@ std::vector<std::int16_t> DesignEffect(SoundEffect effect, double sample_rate, s
   return track.Finish(d->peak);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

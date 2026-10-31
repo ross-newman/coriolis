@@ -1,4 +1,4 @@
-#include "open_elite/ships.h"
+#include "coriolis/ships.h"
 
 #include <algorithm>
 #include <array>
@@ -6,10 +6,10 @@
 #include <map>
 #include <utility>
 
-#include "open_elite/hash.h"
-#include "open_elite/model_builder.h"
+#include "coriolis/hash.h"
+#include "coriolis/model_builder.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -1301,4 +1301,4 @@ const std::vector<Model>& AllShips() {
 
 const Model& GetShip(ShipId id) { return AllShips().at(static_cast<std::size_t>(id)); }
 
-}  // namespace open_elite
+}  // namespace coriolis

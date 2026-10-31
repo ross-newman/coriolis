@@ -1,11 +1,11 @@
-#include "open_elite/commander.h"
+#include "coriolis/commander.h"
 
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <sstream>
 
-namespace open_elite {
+namespace coriolis {
 
 int CargoUsed(const Commander& c) {
   int used = 0;
@@ -219,7 +219,7 @@ bool BuyItem(Commander& c, Item item, int system_tech_level) {
 
 Json CommanderToJson(const Commander& c) {
   Json root = Json::MakeObject();
-  root.Set("format", Json::String("open-elite-commander"));
+  root.Set("format", Json::String("coriolis-commander"));
   root.Set("version", Json::Number(1));
   root.Set("name", Json::String(c.name));
   root.Set("credits", Json::Number(static_cast<double>(c.credits)));
@@ -280,8 +280,8 @@ bool GetFlag(const Json& j, const char* key, bool* out, std::string* error) {
 bool CommanderFromJson(const Json& json, Commander* out, std::string* error) {
   const Json* format = json.Find("format");
   if (!json.is_object() || format == nullptr || !format->is_string() ||
-      format->string_value() != "open-elite-commander") {
-    return Fail(error, "commander: not an open-elite-commander file");
+      format->string_value() != "coriolis-commander") {
+    return Fail(error, "commander: not an coriolis-commander file");
   }
   Commander c;
   double v = 0.0;
@@ -363,4 +363,4 @@ bool LoadCommander(const std::string& path, Commander* out, std::string* error) 
   return true;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

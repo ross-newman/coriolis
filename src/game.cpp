@@ -1,14 +1,14 @@
-#include "open_elite/game.h"
+#include "coriolis/game.h"
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
-#include "open_elite/ai.h"
-#include "open_elite/hash.h"
-#include "open_elite/steering.h"
+#include "coriolis/ai.h"
+#include "coriolis/hash.h"
+#include "coriolis/steering.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -122,7 +122,7 @@ bool Game::Sell(Commodity item, int quantity) {
 }
 
 bool Game::BuyItem(Item item) {
-  return mode_ == GameMode::kDocked && open_elite::BuyItem(commander_, item, system().tech_level);
+  return mode_ == GameMode::kDocked && coriolis::BuyItem(commander_, item, system().tech_level);
 }
 
 void Game::SpawnPlayer(const Vec3d& position, const Quat& orientation, double speed) {
@@ -776,4 +776,4 @@ void Game::Update(const FlightInput& input, double seconds) {
   }
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

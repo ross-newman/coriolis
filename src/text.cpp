@@ -5,9 +5,9 @@
 #include <initializer_list>
 #include <vector>
 
-#include "open_elite/renderer.h"
+#include "coriolis/renderer.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -253,4 +253,4 @@ void DrawCaption(Image& image, const std::string& text, Rgb colour) {
   DrawText(image, text, margin, static_cast<std::int64_t>(image.height()) - 7 * scale - margin, scale, colour);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

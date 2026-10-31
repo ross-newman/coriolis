@@ -1,15 +1,15 @@
-#include "open_elite/screens.h"
+#include "coriolis/screens.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
 
-#include "open_elite/commodity_models.h"
-#include "open_elite/equipment_models.h"
-#include "open_elite/renderer.h"
+#include "coriolis/commodity_models.h"
+#include "coriolis/equipment_models.h"
+#include "coriolis/renderer.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -360,4 +360,4 @@ void DrawSystemScreen(Image& image, const Game& game, int system_index) {
   p.Line(line);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

@@ -1,10 +1,10 @@
-#include "open_elite/sdl_gamepad.h"
+#include "coriolis/sdl_gamepad.h"
 
 #include <SDL3/SDL.h>
 
 #include <algorithm>
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -149,4 +149,4 @@ void SdlGamepad::Rumble(float low, float high, int milliseconds) {
   SDL_RumbleGamepad(pad_, strength(low), strength(high), static_cast<Uint32>(milliseconds));
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

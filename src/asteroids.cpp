@@ -1,4 +1,4 @@
-#include "open_elite/asteroids.h"
+#include "coriolis/asteroids.h"
 
 #include <algorithm>
 #include <array>
@@ -8,10 +8,10 @@
 #include <utility>
 #include <vector>
 
-#include "open_elite/hash.h"
-#include "open_elite/model_builder.h"
+#include "coriolis/hash.h"
+#include "coriolis/model_builder.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -309,4 +309,4 @@ const Blueprint& AsteroidCatalog::Get(std::uint32_t seed, RockClass size_class) 
   return *found->second;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

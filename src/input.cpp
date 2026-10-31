@@ -1,9 +1,9 @@
-#include "open_elite/input.h"
+#include "coriolis/input.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace open_elite {
+namespace coriolis {
 
 const char* ActionName(Action action) {
   switch (action) {
@@ -174,4 +174,4 @@ FlightInput InputMapper::Update(const GamepadState& pad, float seconds) {
   return out;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

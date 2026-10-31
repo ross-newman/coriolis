@@ -1,12 +1,12 @@
-#include "open_elite/nebula.h"
+#include "coriolis/nebula.h"
 
 #include <algorithm>
 #include <cmath>
 #include <optional>
 
-#include "open_elite/hash.h"
+#include "coriolis/hash.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -340,4 +340,4 @@ void DrawNebula(Image& image, std::uint32_t seed, std::uint32_t frame) {
   cached->Paint(image, orientation, 0.8 * w, w / 2.0, h / 2.0);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

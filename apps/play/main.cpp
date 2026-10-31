@@ -1,7 +1,7 @@
-// open_elite: the game in a window. It reads the keyboard and an Xbox style controller, and shows the title screen, the
+// coriolis: the game in a window. It reads the keyboard and an Xbox style controller, and shows the title screen, the
 // station screens and the flight view that GameUi draws.
 //
-//   open_elite [--seed N] [--size WxH] [--window WxH] [--quality 1-4] [--save FILE] [--fullscreen] [--invert-pitch]
+//   coriolis [--seed N] [--size WxH] [--window WxH] [--quality 1-4] [--save FILE] [--fullscreen] [--invert-pitch]
 //              [--autostart] [--frames N --screenshot FILE] [--no-sound] [--volume 0-100]
 //
 // Keys:  flight    arrows pitch and roll (Q E also roll), A D yaw, W S throttle, X full throttle, Z throttle off,
@@ -23,12 +23,12 @@
 #include <memory>
 #include <string>
 
-#include "open_elite/input.h"
-#include "open_elite/png.h"
-#include "open_elite/sound.h"
-#include "open_elite/ui.h"
+#include "coriolis/input.h"
+#include "coriolis/png.h"
+#include "coriolis/sound.h"
+#include "coriolis/ui.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 namespace {
 
@@ -45,7 +45,7 @@ bool ParseSize(const char* text, int* w, int* h) {
 
 std::string DefaultSavePath() {
   const char* home = std::getenv("HOME");
-  return std::string(home != nullptr ? home : ".") + "/.open_elite_save.json";
+  return std::string(home != nullptr ? home : ".") + "/.coriolis_save.json";
 }
 
 /// A controller through SDL2's game controller interface
@@ -308,7 +308,7 @@ int main(int argc, char** argv) {
       screenshot = argv[++i];
     } else {
       std::fprintf(stderr,
-                   "usage: open_elite [--seed N] [--size WxH] [--window WxH] [--quality 1-4] [--save FILE | --no-save] "
+                   "usage: coriolis [--seed N] [--size WxH] [--window WxH] [--quality 1-4] [--save FILE | --no-save] "
                    "[--fullscreen] [--no-sound] [--volume 0-100] "
                    "[--invert-pitch] [--autostart] [--frames N --screenshot FILE]\n");
       return 2;
@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
   }
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
   SDL_Window* window =
-      SDL_CreateWindow("Open Elite", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, window_w, window_h,
+      SDL_CreateWindow("Coriolis", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, window_w, window_h,
                        SDL_WINDOW_RESIZABLE | (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
   SDL_Renderer* renderer = window != nullptr
                                ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)

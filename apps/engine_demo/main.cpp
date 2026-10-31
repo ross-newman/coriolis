@@ -8,10 +8,10 @@
 #include <cstring>
 #include <string>
 
-#include "open_elite/bot.h"
-#include "open_elite/game.h"
+#include "coriolis/bot.h"
+#include "coriolis/game.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 int main(int argc, char** argv) {
   std::uint64_t seed = 1;

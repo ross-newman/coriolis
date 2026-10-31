@@ -8,7 +8,7 @@
 //   ship_viewer --showcase SECONDS [--size WxH] [--out DIRECTORY]
 //
 // With --ship the named ship (0 to 35) is drawn; with --ship all each of the 36 ships is. With --obj a Wavefront OBJ
-// file is drawn to obj.png instead (see open_elite/obj.h for the axes). With --asteroids a sheet of generated
+// file is drawn to obj.png instead (see coriolis/obj.h for the axes). With --asteroids a sheet of generated
 // asteroids is drawn to asteroids.png: a row for each size class (splinter to giant), COLUMNS rocks across, starting
 // from seed N. --showcase writes the
 // pictures of the showcase at 0, 1, 2 ... SECONDS.
@@ -19,14 +19,14 @@
 #include <cstring>
 #include <string>
 
-#include "open_elite/asteroids.h"
-#include "open_elite/commodity_models.h"
-#include "open_elite/equipment_models.h"
-#include "open_elite/obj.h"
-#include "open_elite/png.h"
-#include "open_elite/renderer.h"
-#include "open_elite/ships.h"
-#include "open_elite/showcase.h"
+#include "coriolis/asteroids.h"
+#include "coriolis/commodity_models.h"
+#include "coriolis/equipment_models.h"
+#include "coriolis/obj.h"
+#include "coriolis/png.h"
+#include "coriolis/renderer.h"
+#include "coriolis/ships.h"
+#include "coriolis/showcase.h"
 
 namespace {
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   bool items = false;
   bool goods = false;
   std::uint32_t asteroid_seed = 1;
-  open_elite::ObjOptions obj_options;
+  coriolis::ObjOptions obj_options;
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     } else if (arg == "--flip-winding") {
       obj_options.flip_winding = true;
     } else if (arg == "--sway") {
-      obj_options.spin = open_elite::Spin::kSway;
+      obj_options.spin = coriolis::Spin::kSway;
     } else if (arg == "--ship" && has_value) {
       ship = argv[++i];
     } else if (arg == "--size" && has_value) {
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  using namespace open_elite;
+  using namespace coriolis;
   int failures = 0;
 
   if (showcase_seconds >= 0) {

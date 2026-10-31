@@ -1,4 +1,4 @@
-#include "open_elite/obj.h"
+#include "coriolis/obj.h"
 
 #include <algorithm>
 #include <cctype>
@@ -8,9 +8,9 @@
 #include <map>
 #include <sstream>
 
-#include "open_elite/model_builder.h"
+#include "coriolis/model_builder.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -229,4 +229,4 @@ bool LoadObj(const std::string& path, const ObjOptions& options, Model* model, s
   return ParseObj(text, directory, named, model, error);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

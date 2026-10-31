@@ -6,9 +6,9 @@
 #include <cstdlib>
 #include <vector>
 
-#include "open_elite/adlib_synth.h"
-#include "open_elite/sound.h"
-#include "open_elite/ui.h"
+#include "coriolis/adlib_synth.h"
+#include "coriolis/sound.h"
+#include "coriolis/ui.h"
 
 namespace {
 
@@ -22,7 +22,7 @@ int g_failures = 0;
     }                                                                                    \
   } while (false)
 
-using namespace open_elite;
+using namespace coriolis;
 
 int Peak(const std::vector<std::int16_t>& samples) {
   int peak = 0;

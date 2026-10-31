@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "open_elite/adlib_synth.h"
-#include "open_elite/music.h"
+#include "coriolis/adlib_synth.h"
+#include "coriolis/music.h"
 
-using namespace open_elite;
+using namespace coriolis;
 
 namespace {
 

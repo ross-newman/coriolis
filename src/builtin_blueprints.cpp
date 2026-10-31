@@ -2,10 +2,10 @@
 #include <array>
 #include <cmath>
 
-#include "open_elite/blueprint.h"
-#include "open_elite/ships.h"
+#include "coriolis/blueprint.h"
+#include "coriolis/ships.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -180,4 +180,4 @@ const Blueprint* FindBuiltInBlueprint(const std::string& id) {
   return nullptr;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

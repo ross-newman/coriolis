@@ -1,4 +1,4 @@
-#include "open_elite/cockpit.h"
+#include "coriolis/cockpit.h"
 
 #include <algorithm>
 #include <array>
@@ -10,11 +10,11 @@
 #include <string>
 #include <utility>
 
-#include "open_elite/hash.h"
-#include "open_elite/renderer.h"
-#include "open_elite/steering.h"
+#include "coriolis/hash.h"
+#include "coriolis/renderer.h"
+#include "coriolis/steering.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -2188,4 +2188,4 @@ void DrawPlanetPortrait(Image& image, std::uint32_t system_seed, double turn) {
   DrawBody(canvas, cam, body, {0.0, 0.0, distance}, light, system_seed);
 }
 
-}  // namespace open_elite
+}  // namespace coriolis

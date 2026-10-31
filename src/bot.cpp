@@ -1,11 +1,11 @@
-#include "open_elite/bot.h"
+#include "coriolis/bot.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "open_elite/steering.h"
+#include "coriolis/steering.h"
 
-namespace open_elite {
+namespace coriolis {
 
 namespace {
 
@@ -176,4 +176,4 @@ bool BotPilot::Dock(Game& game) {
   return true;
 }
 
-}  // namespace open_elite
+}  // namespace coriolis
