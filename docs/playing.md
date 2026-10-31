@@ -60,13 +60,13 @@ The equipment screen draws the highlighted item under the list.
 
 ![The equipment screen](img/screens/equipment.webp){ loading=lazy }
 
-The shipyard sells other ships. You pay the price less what the yard gives for your own ship; your equipment and
+The [shipyard](shipyard.md) sells other ships. You pay the price less what the yard gives for your own ship; your equipment and
 missiles go across to the new one, and the hold has to be big enough for the cargo you carry. The better ships need a
 high tech level.
 
 ![The shipyard](img/screens/shipyard.webp){ loading=lazy }
 
-The mission board offers jobs one after another, a story of five steps: carry a sealed packet to a nearby system, shoot
+The [mission board](missions.md) offers jobs one after another, a story of five steps: carry a sealed packet to a nearby system, shoot
 down pirates, carry a second packet, break the pirate fleet, and carry the plans of a galactic hyperdrive to the engineer
 who will build one for you. Enter takes the job and Backspace gives it up. A delivery is paid when you dock at its
 destination, and a hunt when you dock at any station after shooting down enough pirates.
@@ -76,6 +76,18 @@ destination, and a hunt when you dock at any station after shooting down enough 
 ![The galactic chart](img/screens/chart.webp){ loading=lazy }
 
 ![Data on a system](img/screens/system.webp){ loading=lazy }
+
+## Sound and music
+
+All the sound is made by the game itself, with no sound files: FM synthesized effects in the style of the AdLib card, and
+four original pieces of music that loop and crossfade into each other. F2 turns the sound off and on.
+
+| Music | Plays |
+| --- | --- |
+| Station theme | Docked, on every station screen. Dark, slow and half empty |
+| Title theme | On the title screen. Slow and wide, with a long melody and a little hope |
+| Fight theme | In flight while a pirate or alien is within 9 km (or the police, if you are wanted), and for a few seconds after. Hard and driving |
+| Jump theme | From the start of the hyperspace countdown to the end of the arrival. A rising swell, with a pulse that speeds up |
 
 ## Controls
 

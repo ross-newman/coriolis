@@ -32,6 +32,7 @@
 #include "coriolis/galaxy.h"
 #include "coriolis/game.h"
 #include "coriolis/market.h"
+#include "coriolis/missions.h"
 #include "coriolis/png.h"
 #include "coriolis/renderer.h"
 #include "coriolis/screens.h"
@@ -704,6 +705,93 @@ bool WriteUpgradesPage(const std::string& docs) {
   return WriteFile(docs + "/upgrades.md", md);
 }
 
+/// A link to a ship's entry on the ships page
+std::string ShipsPageLink(const std::string& name) {
+  const std::string local = Link(name);
+  return "[" + name + "](ships.md" + local.substr(local.find("](") + 2);
+}
+
+/// "THE SEALED PACKET" as "The Sealed Packet"
+std::string TitleCase(const std::string& text) {
+  std::string out;
+  bool start = true;
+  for (const char c : text) {
+    out += start ? static_cast<char>(std::toupper(static_cast<unsigned char>(c)))
+                 : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    start = c == ' ';
+  }
+  return out;
+}
+
+bool WriteShipyardPage(const std::string& docs, const std::vector<Blueprint>& blueprints) {
+  std::string md =
+      "# Shipyard\n\n"
+      "Docked at a station, the shipyard screen sells other ships. You pay the price less what the yard gives for "
+      "your own ship in part exchange; your equipment and missiles go across to the new one. The hold of the new "
+      "ship has to be big enough for the cargo you carry (an extra cargo bay, if you have fitted one, adds its tonnes "
+      "to any ship). The better ships need a system of a high tech level. Prices are in credits.\n\n"
+      "![The shipyard](img/screens/shipyard.webp){ loading=lazy }\n\n"
+      "| Ship | Price | Hold | Top speed | Hull | Shield | Needs tech level |\n"
+      "| --- | --- | --- | --- | --- | --- | --- |\n";
+  std::string entries = "\n## The ships\n\n";
+  for (int y = 0; y < ShipForSaleCount(); ++y) {
+    const ShipForSale& sale = ShipForSaleAt(y);
+    for (std::size_t i = 0; i < blueprints.size(); ++i) {
+      if (blueprints[i].id != sale.id) {
+        continue;
+      }
+      const BlueprintStats& s = blueprints[i].stats;
+      md += "| " + ShipsPageLink(kShipName[i]) + " | " + Num(sale.price / 10.0) + " Cr | " + std::to_string(sale.hold) +
+            " t | " + Num(s.max_speed) + " m/s | " + Grouped(s.hull) + " | " + Grouped(s.shield) + " | " +
+            std::to_string(sale.tech_level) + " |\n";
+      Commander owner;
+      owner.ship = sale.id;
+      entries += "### " + std::string(kShipName[i]) + "\n\n![" + kShipName[i] + "](" +
+                 Index("img/ships/ship_%02zu.webp", i) + "){ loading=lazy }\n\nThe yard gives " +
+                 Num(TradeInValue(owner) / 10.0) + " Cr for it in part exchange.\n\n";
+    }
+  }
+  return WriteFile(docs + "/shipyard.md", md + entries);
+}
+
+bool WriteMissionsPage(const std::string& docs, const Galaxy& galaxy) {
+  std::string md =
+      "# Missions\n\n"
+      "The mission board in the station offers jobs one after another: a story of " + std::to_string(kStorySteps) +
+      " steps. A job is on offer at any station once the one before is done, one at a time. Enter takes the job and "
+      "Backspace gives it up; the job and the place in the story are saved with the commander. A delivery is paid "
+      "when you dock at its destination. A hunt counts the pirates you shoot down (the bounties are yours as "
+      "well) and is paid when you dock at any station.\n\n"
+      "![The mission board](img/screens/missions.webp){ loading=lazy }\n\n"
+      "The jobs are written for this game. The places in them depend on where you are when you take the job; the "
+      "text below is what a pilot docked at the system of Lave is offered.\n\n";
+  Commander c;
+  c.system = std::max(0, galaxy.Find("Lave"));
+  for (int step = 0; step < kStorySteps; ++step) {
+    c.story_step = step;
+    Mission m;
+    if (!MissionOffered(c, galaxy, &m)) {
+      continue;
+    }
+    md += "## " + std::to_string(step + 1) + ". " + TitleCase(MissionTitle(m)) + "\n\n";
+    std::string paragraph;
+    for (const std::string& line : MissionBriefing(m, galaxy)) {
+      if (line.empty()) {
+        md += paragraph + "\n\n";
+        paragraph.clear();
+      } else {
+        paragraph += (paragraph.empty() ? "" : " ") + (line.rfind("PAYMENT: ", 0) == 0 ? "Payment: " + TitleCase(line.substr(9)) : line);
+      }
+    }
+    md += paragraph + "\n\n";
+    md += "When it is done: *" + MissionDone(m) + "*\n\n";
+  }
+  md +=
+      "With the five jobs done the woman at the bar has no more work for you. The galactic hyperdrive is fitted and the "
+      "next galaxy is one jump away (J in flight), with its own 256 systems to trade in.\n";
+  return WriteFile(docs + "/missions.md", md);
+}
+
 bool WriteGoodsPage(const std::string& docs) {
   std::string md =
       "# Trade goods\n\n"
@@ -925,6 +1013,8 @@ int main(int argc, char** argv) {
   failures += WriteShipsPage(docs, blueprints, ships) ? 0 : 1;
   failures += WriteStationsPage(docs, blueprints, ships, station_systems, galaxy) ? 0 : 1;
   failures += WriteUpgradesPage(docs) ? 0 : 1;
+  failures += WriteShipyardPage(docs, blueprints) ? 0 : 1;
+  failures += WriteMissionsPage(docs, galaxy) ? 0 : 1;
   failures += WriteGoodsPage(docs) ? 0 : 1;
   failures += WritePlanetsPage(docs, worlds) ? 0 : 1;
 
