@@ -2,6 +2,13 @@
   <img src="docs/img/coriolis.png" alt="Coriolis" width="360">
 </p>
 
+<p align="center">
+  <a href="https://github.com/ross-newman/coriolis/actions/workflows/deb.yml"><img src="https://github.com/ross-newman/coriolis/actions/workflows/deb.yml/badge.svg?branch=main" alt="Debian packages: Ubuntu 24.04 and 26.04"></a>
+  <a href="https://github.com/ross-newman/coriolis/actions/workflows/pages.yml"><img src="https://github.com/ross-newman/coriolis/actions/workflows/pages.yml/badge.svg?branch=main" alt="Documentation site"></a>
+  <a href="https://github.com/ross-newman/coriolis/releases/latest"><img src="https://img.shields.io/github/v/release/ross-newman/coriolis?include_prereleases" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ross-newman/coriolis" alt="MIT licence"></a>
+</p>
+
 # Coriolis
 
 The start of an open source version of the space trading game Elite.

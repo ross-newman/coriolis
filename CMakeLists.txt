@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
-project(coriolis VERSION 0.1.0 LANGUAGES CXX)
+# The version is in the VERSION file in the root
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CORIOLIS_VERSION_FROM_FILE LIMIT_COUNT 1)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+project(coriolis VERSION ${CORIOLIS_VERSION_FROM_FILE} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -129,15 +132,22 @@ endif()
 
 # Installing and packaging: `cpack -G DEB` in the build directory makes a .deb of the game (needs SDL2, so that
 # coriolis_game is built). CORIOLIS_DISTRO names the distribution it was built on, for the file name, and
-# CORIOLIS_PACKAGE_VERSION overrides the version (the release workflow sets it from the tag).
+# the package version is in the VERSION file, and CORIOLIS_PACKAGE_VERSION overrides it (the release workflow sets it
+# from the tag).
 if(TARGET coriolis_game)
   include(GNUInstallDirs)
   install(TARGETS coriolis_game RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(FILES packaging/coriolis.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
   install(FILES packaging/coriolis.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps)
   install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+  install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR} RENAME copyright)
+  install(FILES VERSION DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-  set(CORIOLIS_PACKAGE_VERSION "${PROJECT_VERSION}" CACHE STRING "Version of the package")
+  # The package version is the one in the VERSION file unless CORIOLIS_PACKAGE_VERSION says otherwise
+  set(CORIOLIS_PACKAGE_VERSION "" CACHE STRING "Version of the package, if not the one in the VERSION file")
+  if(NOT CORIOLIS_PACKAGE_VERSION)
+    set(CORIOLIS_PACKAGE_VERSION "${PROJECT_VERSION}")
+  endif()
   set(CORIOLIS_DISTRO "" CACHE STRING "Distribution the package is built for, such as ubuntu24.04")
   execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CORIOLIS_DEB_ARCH
                   OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
