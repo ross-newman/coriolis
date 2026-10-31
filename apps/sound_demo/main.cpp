@@ -86,13 +86,23 @@ int main(int argc, char** argv) {
     std::printf("%-16s %5.2f s  %s\n", SoundEffectName(effect), static_cast<double>(samples.size()) / synth.sample_rate(),
                 path.c_str());
   }
-  // The music of the station, the loop that plays while docked
-  const std::vector<std::int16_t> theme = RenderStationTheme(rate);
-  const std::string theme_path = out + "/station_theme.wav";
-  if (!WriteWav(theme_path, theme, rate)) {
-    std::fprintf(stderr, "cannot write %s\n", theme_path.c_str());
-    return 1;
+  // The music: the station theme, the loop that plays while docked, and the title, fight and jump themes
+  const struct {
+    MusicTrack track;
+    const char* name;
+    const char* file;
+  } pieces[] = {{MusicTrack::kStation, "STATION THEME", "station_theme"},
+                {MusicTrack::kTitle, "TITLE THEME", "title_theme"},
+                {MusicTrack::kFight, "FIGHT THEME", "fight_theme"},
+                {MusicTrack::kJump, "JUMP THEME", "jump_theme"}};
+  for (const auto& piece : pieces) {
+    const std::vector<std::int16_t> theme = RenderMusicTrack(piece.track, rate);
+    const std::string theme_path = out + "/" + piece.file + ".wav";
+    if (!WriteWav(theme_path, theme, rate)) {
+      std::fprintf(stderr, "cannot write %s\n", theme_path.c_str());
+      return 1;
+    }
+    std::printf("%-16s %5.2f s  %s\n", piece.name, static_cast<double>(theme.size()) / rate, theme_path.c_str());
   }
-  std::printf("%-16s %5.2f s  %s\n", "STATION THEME", static_cast<double>(theme.size()) / rate, theme_path.c_str());
   return 0;
 }

@@ -78,7 +78,11 @@ class GameUi {
   /// How loud the station music is to be, 0 to 1, or below 0 when there is none: it plays in the station, on the trading,
   /// equipment, chart and status screens, and fades out when the ship launches. The front end hands it to
   /// `SoundMixer::SetMusic`.
-  float MusicLevel() const;
+  float MusicLevel() const { return MusicLevel(MusicTrack::kStation); }
+  /// The same for each piece of music: the station theme in the station, the title theme on the title screen, the fight
+  /// theme in flight while enemies are near (and for a few seconds after), and the jump theme in hyperspace. The front
+  /// end hands each to `SoundMixer::SetMusic`, so one fades out as the next comes in.
+  float MusicLevel(MusicTrack track) const;
 
  private:
   void StartNewGame();
@@ -93,6 +97,7 @@ class GameUi {
   void CueEvents(const std::vector<Event>& events);
   void CueMessages(const std::vector<std::string>& messages);
   void CueState(double seconds);
+  bool InCombat() const;
   bool SaveNow();
   int TitleItemCount() const;
   std::string TitleItem(int index) const;
@@ -135,6 +140,8 @@ class GameUi {
   float rumble_ = 0.0f;
   std::vector<SoundCue> sounds_;
   bool was_jumping_ = false;
+  /// Seconds left of the fight music: it holds for a while after the last enemy has gone
+  double fight_hold_ = 0.0;
   // What the sound cues last saw, to cue only changes
   EntityId last_lock_ = kNoEntity;
   EntityId last_target_ = kNoEntity;

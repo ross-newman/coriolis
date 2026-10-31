@@ -47,7 +47,7 @@ the floor. Switch on a docking computer with K and it flies the ship in for you.
 
 ## The station screens
 
-Once docked, the screens of the station come up: status, market, equipment, shipyard, the galactic chart and the data on a system.
+Once docked, the screens of the station come up: status, market, equipment, shipyard, missions, the galactic chart and the data on a system.
 Tab changes screen, the arrows and Enter choose and buy, Backspace sells, and L launches.
 
 ![Commander status](img/screens/status.webp){ loading=lazy }

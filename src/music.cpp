@@ -535,4 +535,274 @@ std::vector<std::int16_t> RenderStationTheme(int sample_rate) {
   return out;
 }
 
+namespace {
+
+/// The length of a loop in samples
+std::size_t LoopLength(double bpm, int bars, double rate) {
+  return static_cast<std::size_t>(std::llround(bars * 4.0 * 60.0 / bpm * rate));
+}
+
+/// Mix a loop with a reverb of what was sent to it and scale it to a loud, unclipped 16 bit loop
+std::vector<std::int16_t> Master(const std::vector<float>& dry, const std::vector<float>& send, double rate,
+                                 float wet_gain) {
+  const std::vector<float> wet = Reverb(send, rate);
+  std::vector<float> mix(dry.size());
+  float peak = 1e-9f;
+  for (std::size_t i = 0; i < dry.size(); ++i) {
+    mix[i] = dry[i] + wet_gain * wet[i];
+    peak = std::max(peak, std::fabs(mix[i]));
+  }
+  const float scale = 0.82f / peak;
+  std::vector<std::int16_t> out(dry.size());
+  for (std::size_t i = 0; i < dry.size(); ++i) {
+    out[i] = static_cast<std::int16_t>(std::lround(std::tanh(mix[i] * scale * 1.1f) * 30000.0f));
+  }
+  return out;
+}
+
+struct SongChord {
+  std::array<int, 5> notes;
+  int root;
+};
+
+}  // namespace
+
+std::vector<std::int16_t> RenderTitleTheme(int sample_rate) {
+  const double rate = std::max(8000, sample_rate);
+  const double beat = 60.0 / TitleTheme::kBeatsPerMinute;
+  const std::size_t length = LoopLength(TitleTheme::kBeatsPerMinute, TitleTheme::kBars, rate);
+  const std::size_t tail = static_cast<std::size_t>(12.0 * rate);
+  const auto at = [&](int bar, double beats) {
+    return static_cast<std::size_t>(std::llround((bar * TitleTheme::kBeatsPerBar + beats) * beat * rate));
+  };
+  const double bar_seconds = TitleTheme::kBeatsPerBar * beat;
+
+  Track pads(length, tail);
+  Track lead(length, tail);
+  Track bells(length, tail);
+  Track pulse(length, tail);
+  Noise rng;
+  const Wavetable warm{1.0, 0.5, 0.28, 0.14, 0.07};
+  const Wavetable sub{1.0, 0.28, 0.06};
+
+  // Eight chords of two bars in E minor, leaning toward the relative major and ending on the dominant, which pulls the
+  // loop back round to the start
+  static const std::array<SongChord, 8> chords = {{
+      {{52, 55, 59, 62, 66}, 40},  // E minor ninth
+      {{48, 52, 55, 59, 66}, 36},  // C major seventh with the sharp eleventh
+      {{57, 60, 64, 67, 71}, 33},  // A minor ninth
+      {{47, 52, 54, 57, 60}, 35},  // B seventh suspended, with a flat nine
+      {{52, 55, 59, 62, 66}, 40},
+      {{55, 59, 62, 66, 71}, 31},  // G major seventh
+      {{48, 52, 55, 59, 66}, 36},
+      {{47, 52, 54, 57, 60}, 35},
+  }};
+  static const std::array<double, 8> melody = {71, 76, 72, 69, 71, 74, 79, 78};
+
+  for (std::size_t c = 0; c < chords.size(); ++c) {
+    const int bar = static_cast<int>(c) * 2;
+    const double seconds = 2.0 * bar_seconds + 1.6;
+    const double level = c < 2 ? 0.8 : 1.0;
+    for (std::size_t k = 0; k < 4; ++k) {
+      PadNote(pads, warm, at(bar, 0.0), chords[c].notes[k], seconds, 0.07 * level, rate,
+              1.3 * static_cast<double>(c) + static_cast<double>(k));
+    }
+    PadNote(pads, sub, at(bar, 0.0), chords[c].root, seconds, 0.2 * level, rate, 0.5 * static_cast<double>(c));
+    const double from = melody[(c + melody.size() - 1) % melody.size()];
+    Ghost(lead, at(bar, 0.5), from, melody[c], bar_seconds * 1.7, 0.13, rate, rng);
+  }
+  // Bells over the chords from the fifth bar, on the first and the third beat, climbing through the chord
+  for (int bar = 4; bar < TitleTheme::kBars; ++bar) {
+    const SongChord& chord = chords[static_cast<std::size_t>(bar / 2)];
+    Bell(bells, at(bar, 0.0), chord.notes[static_cast<std::size_t>((bar * 2) % 5)] + 24, 0.06, 2.0, rate);
+    Bell(bells, at(bar, 2.0), chord.notes[static_cast<std::size_t>((bar * 2 + 3) % 5)] + 24, 0.05, 2.0, rate);
+  }
+  // A slow pulse from the ninth bar, one beat in four
+  for (int bar = 8; bar < TitleTheme::kBars; ++bar) {
+    Thump(pulse, at(bar, 0.0), 0.14, rate);
+    Thump(pulse, at(bar, 2.0), 0.1, rate);
+  }
+
+  const std::vector<float> pads_out = pads.Folded();
+  const std::vector<float> lead_out = lead.Folded();
+  const std::vector<float> bells_out = bells.Folded();
+  const std::vector<float> pulse_out = pulse.Folded();
+  std::vector<float> send(length);
+  std::vector<float> dry(length);
+  for (std::size_t i = 0; i < length; ++i) {
+    send[i] = 0.55f * pads_out[i] + 1.0f * lead_out[i] + 1.0f * bells_out[i] + 0.2f * pulse_out[i];
+    dry[i] = 0.5f * pads_out[i] + 0.45f * lead_out[i] + 0.4f * bells_out[i] + 0.8f * pulse_out[i];
+  }
+  return Master(dry, send, rate, 1.4f);
+}
+
+std::vector<std::int16_t> RenderFightTheme(int sample_rate) {
+  const double rate = std::max(8000, sample_rate);
+  const double beat = 60.0 / FightTheme::kBeatsPerMinute;
+  const std::size_t length = LoopLength(FightTheme::kBeatsPerMinute, FightTheme::kBars, rate);
+  const std::size_t tail = static_cast<std::size_t>(6.0 * rate);
+  const auto at = [&](int bar, double beats) {
+    return static_cast<std::size_t>(std::llround((bar * FightTheme::kBeatsPerBar + beats) * beat * rate));
+  };
+
+  Track pads(length, tail);
+  Track bass(length, tail);
+  Track pattern(length, tail);
+  Track stabs(length, tail);
+  Track kick(length, tail);
+  Noise rng;
+  const Wavetable dark{1.0, 0.6, 0.4, 0.3, 0.2, 0.12};
+
+  // Sixteen bars: the root of each bar and whether its third is major
+  static const std::array<int, 16> roots = {38, 38, 34, 34, 38, 38, 31, 33, 38, 38, 34, 34, 31, 33, 39, 33};
+  static const std::array<int, 16> thirds = {3, 3, 4, 4, 3, 3, 3, 4, 3, 3, 4, 4, 3, 4, 4, 4};
+
+  for (int bar = 0; bar < FightTheme::kBars; bar += 2) {
+    const int root = roots[static_cast<std::size_t>(bar)];
+    const int third = thirds[static_cast<std::size_t>(bar)];
+    const double seconds = 2.0 * 4.0 * beat;
+    for (const int note : {root + 24, root + 24 + third, root + 31}) {
+      PadNote(pads, dark, at(bar, 0.0), note, seconds, 0.045, rate, 0.9 * bar + note);
+    }
+  }
+  for (int bar = 0; bar < FightTheme::kBars; ++bar) {
+    const int root = roots[static_cast<std::size_t>(bar)];
+    const int third = thirds[static_cast<std::size_t>(bar)];
+    // The kick on every beat, with a soft one between them
+    for (int b = 0; b < 4; ++b) {
+      Thump(kick, at(bar, b), b == 0 ? 0.42 : 0.34, rate);
+      Thump(kick, at(bar, b + 0.5), 0.1, rate);
+    }
+    // The bass on the eighths, leaving gaps so that it syncopates
+    static const std::array<bool, 8> played = {true, true, true, false, true, true, true, false};
+    for (int k = 0; k < 8; ++k) {
+      if (played[static_cast<std::size_t>(k)]) {
+        Pluck(bass, at(bar, k * 0.5), Hz(root + (k == 2 || k == 6 ? 12 : 0) + 12), 0.3, 0.4, rate, rng);
+      }
+    }
+    // The fast plucked pattern, from the ninth bar: sixteenths round the chord, the fifth beat of each four higher
+    if (bar >= 8) {
+      const std::array<int, 4> shape = {root + 24, root + 31, root + 24 + third, root + 36};
+      for (int k = 0; k < 16; ++k) {
+        Pluck(pattern, at(bar, k * 0.25), Hz(shape[static_cast<std::size_t>(k % 4)] + (k % 8 >= 4 ? 12 : 0)),
+              k % 4 == 0 ? 0.24 : 0.15, 0.22, rate, rng);
+      }
+    }
+    // A bell stab on the last half beat of every other bar
+    if (bar % 2 == 1) {
+      Bell(stabs, at(bar, 3.5), root + 36 + third, 0.07, 0.8, rate);
+      Bell(stabs, at(bar, 3.5), root + 43, 0.05, 0.8, rate);
+    }
+  }
+
+  const std::vector<float> pads_out = pads.Folded();
+  const std::vector<float> bass_out = bass.Folded();
+  const std::vector<float> pattern_out = pattern.Folded();
+  const std::vector<float> stabs_out = stabs.Folded();
+  const std::vector<float> kick_out = kick.Folded();
+  std::vector<float> send(length);
+  std::vector<float> dry(length);
+  for (std::size_t i = 0; i < length; ++i) {
+    send[i] = 0.4f * pads_out[i] + 0.15f * bass_out[i] + 0.35f * pattern_out[i] + 1.0f * stabs_out[i];
+    dry[i] = 0.5f * pads_out[i] + 0.8f * bass_out[i] + 0.9f * pattern_out[i] + 0.4f * stabs_out[i] + 0.8f * kick_out[i];
+  }
+  return Master(dry, send, rate, 0.7f);
+}
+
+std::vector<std::int16_t> RenderJumpTheme(int sample_rate) {
+  const double rate = std::max(8000, sample_rate);
+  const double beat = 60.0 / JumpTheme::kBeatsPerMinute;
+  const std::size_t length = LoopLength(JumpTheme::kBeatsPerMinute, JumpTheme::kBars, rate);
+  const std::size_t tail = static_cast<std::size_t>(8.0 * rate);
+  const auto at = [&](int bar, double beats) {
+    return static_cast<std::size_t>(std::llround((bar * JumpTheme::kBeatsPerBar + beats) * beat * rate));
+  };
+  const double bar_seconds = JumpTheme::kBeatsPerBar * beat;
+
+  Track pads(length, tail);
+  Track lead(length, tail);
+  Track bells(length, tail);
+  Track pulse(length, tail);
+  Noise rng;
+  const Wavetable glass{1.0, 0.0, 0.5, 0.0, 0.25, 0.0, 0.12};
+  const Wavetable sub{1.0, 0.3, 0.08};
+
+  // Four chords of two bars, each a step higher: the climb
+  static const std::array<SongChord, 4> chords = {{
+      {{50, 57, 62, 65, 69}, 38},
+      {{53, 60, 65, 69, 72}, 41},
+      {{55, 62, 67, 70, 74}, 43},
+      {{57, 64, 69, 72, 76}, 45},
+  }};
+  for (std::size_t c = 0; c < chords.size(); ++c) {
+    const int bar = static_cast<int>(c) * 2;
+    for (std::size_t k = 0; k < 5; ++k) {
+      PadNote(pads, glass, at(bar, 0.0), chords[c].notes[k], 2.0 * bar_seconds, 0.06, rate,
+              0.8 * static_cast<double>(c) + static_cast<double>(k));
+    }
+    PadNote(pads, sub, at(bar, 0.0), chords[c].root, 2.0 * bar_seconds, 0.18, rate, 0.3 * static_cast<double>(c));
+    // The voice glides up to the top of each chord
+    Ghost(lead, at(bar, 0.0), chords[c].notes[0] + 12, chords[c].notes[4] + 12, 2.0 * bar_seconds * 0.95, 0.12, rate,
+          rng);
+  }
+  // Bells running up through the chord, eight to a bar
+  for (int bar = 0; bar < JumpTheme::kBars; ++bar) {
+    const SongChord& chord = chords[static_cast<std::size_t>(bar / 2)];
+    for (int k = 0; k < 8; ++k) {
+      const int note = chord.notes[static_cast<std::size_t>(k % 5)] + 12 * (1 + k / 5);
+      Bell(bells, at(bar, k * 0.5), note, 0.035 + 0.003 * bar, 0.5, rate);
+    }
+  }
+  // A pulse that speeds up: a beat in a bar at first, then every beat, then twice a beat
+  for (int bar = 0; bar < JumpTheme::kBars; ++bar) {
+    const int per_beat = bar < 2 ? 0 : (bar < 6 ? 1 : 2);
+    for (int b = 0; b < 4; ++b) {
+      if (per_beat == 0 && b != 0) {
+        continue;
+      }
+      for (int h = 0; h <= (per_beat == 2 ? 1 : 0); ++h) {
+        Thump(pulse, at(bar, b + 0.5 * h), 0.12 + 0.015 * bar, rate);
+      }
+    }
+  }
+
+  // The rush: noise through a band whose centre climbs over the loop, swelling and dying at the ends
+  std::vector<float> rush(length);
+  Band band;
+  for (std::size_t i = 0; i < length; ++i) {
+    const double x = static_cast<double>(i) / static_cast<double>(length);
+    const double fc = 250.0 + 5200.0 * x * x;
+    const float f = static_cast<float>(2.0 * std::sin(3.14159265358979 * fc / rate));
+    double env = std::pow(std::sin(1.5707963267948966 * x), 3.0);
+    env *= 1.0 - std::min(1.0, std::max(0.0, (x - 0.95) / 0.05));
+    rush[i] = static_cast<float>(env) * band.Process(rng.Next(), f, 0.12f);
+  }
+
+  const std::vector<float> pads_out = pads.Folded();
+  const std::vector<float> lead_out = lead.Folded();
+  const std::vector<float> bells_out = bells.Folded();
+  const std::vector<float> pulse_out = pulse.Folded();
+  std::vector<float> send(length);
+  std::vector<float> dry(length);
+  for (std::size_t i = 0; i < length; ++i) {
+    send[i] = 0.5f * pads_out[i] + 1.0f * lead_out[i] + 1.0f * bells_out[i] + 0.3f * rush[i];
+    dry[i] = 0.5f * pads_out[i] + 0.4f * lead_out[i] + 0.5f * bells_out[i] + 0.9f * pulse_out[i] + 0.35f * rush[i];
+  }
+  return Master(dry, send, rate, 1.0f);
+}
+
+std::vector<std::int16_t> RenderMusicTrack(MusicTrack track, int sample_rate) {
+  switch (track) {
+    case MusicTrack::kStation:
+      return RenderStationTheme(sample_rate);
+    case MusicTrack::kTitle:
+      return RenderTitleTheme(sample_rate);
+    case MusicTrack::kFight:
+      return RenderFightTheme(sample_rate);
+    case MusicTrack::kJump:
+      return RenderJumpTheme(sample_rate);
+  }
+  return {};
+}
+
 }  // namespace coriolis

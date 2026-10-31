@@ -18,16 +18,23 @@ SoundMixer::SoundMixer(int sample_rate, std::uint32_t seed) : sample_rate_(std::
 void SoundMixer::set_master_volume(float volume) { master_ = std::clamp(volume, 0.0f, 1.0f); }
 
 void SoundMixer::PrepareMusic() {
-  if (music_.empty()) {
-    music_ = RenderStationTheme(sample_rate_);
+  for (std::size_t i = 0; i < kMusicTrackCount; ++i) {
+    PrepareMusic(static_cast<MusicTrack>(i));
   }
 }
 
-void SoundMixer::SetMusic(float level) {
-  if (level > 0.0f) {
-    PrepareMusic();
+void SoundMixer::PrepareMusic(MusicTrack track) {
+  MusicState& m = music_[static_cast<std::size_t>(track)];
+  if (m.samples.empty()) {
+    m.samples = RenderMusicTrack(track, sample_rate_);
   }
-  music_target_ = level;
+}
+
+void SoundMixer::SetMusic(MusicTrack track, float level) {
+  if (level > 0.0f) {
+    PrepareMusic(track);
+  }
+  music_[static_cast<std::size_t>(track)].target = level;
 }
 
 double SoundMixer::Duration(SoundEffect effect) const {
@@ -84,17 +91,19 @@ void SoundMixer::Mix(std::int16_t* out, std::size_t frames) {
                                [&](const Voice& v) { return v.position >= bank_[static_cast<std::size_t>(v.effect)].size(); }),
                 voices_.end());
   for (std::size_t n = 0; n < frames; ++n) {
-    // The station music, faded in and out; it starts from the top each time it comes back
-    if (music_gain_ > 1e-4 || music_target_ >= 0.0f) {
-      music_gain_ += ((music_target_ >= 0.0f ? static_cast<double>(music_target_) : 0.0) - music_gain_) /
-                     ((music_target_ >= 0.0f ? 1.2 : 0.45) * static_cast<double>(sample_rate_));
-      if (!music_.empty()) {
-        sum[n] += static_cast<float>(music_[music_position_]) * (1.0f / 32768.0f) * static_cast<float>(music_gain_);
-        music_position_ = (music_position_ + 1) % music_.size();
-      }
-      if (music_target_ < 0.0f && music_gain_ <= 1e-4) {
-        music_gain_ = 0.0;
-        music_position_ = 0;
+    // The music, each track faded in and out on its own; a track starts from the top each time it comes back
+    for (MusicState& m : music_) {
+      if (m.gain > 1e-4 || m.target >= 0.0f) {
+        m.gain += ((m.target >= 0.0f ? static_cast<double>(m.target) : 0.0) - m.gain) /
+                  ((m.target >= 0.0f ? 1.2 : 0.45) * static_cast<double>(sample_rate_));
+        if (!m.samples.empty()) {
+          sum[n] += static_cast<float>(m.samples[m.position]) * (1.0f / 32768.0f) * static_cast<float>(m.gain);
+          m.position = (m.position + 1) % m.samples.size();
+        }
+        if (m.target < 0.0f && m.gain <= 1e-4) {
+          m.gain = 0.0;
+          m.position = 0;
+        }
       }
     }
     // The engine drone, if there is one

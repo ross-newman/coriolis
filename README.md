@@ -244,7 +244,8 @@ Everything is deterministic from a seed, runs without a window or a GPU, and is 
 | Spawner | `spawner.h` | Traffic that follows the system's government and tech level and the player's rank and record: packs of pirates, police that come faster for a wanted pilot, traders, hunters, rare aliens |
 | Galaxy | `galaxy.h` | Eight galaxies of 256 systems made from a number, with government, economy, tech level, population, species and a chart position, and distances in light years |
 | Market | `market.h` | 17 goods whose prices follow the system's economy and drift between visits |
-| Commander | `commander.h` | Money, fuel, cargo, equipment, legal status, kills and rank (Harmless to Elite), buying and selling, and saving to a checked JSON file |
+| Commander | `commander.h` | Money, fuel, cargo, equipment, legal status, kills and rank (Harmless to Elite), buying and selling, a shipyard that trades in your ship for another (with a bigger or smaller hold), the extra cargo bay and the galactic hyperdrive, and saving to a checked JSON file |
+| Missions | `missions.h`, `src/missions.cpp` | A story of five jobs offered one after another at any station: carry a sealed packet, clear pirates from the lanes, carry a second packet, break the pirate fleet, and carry the plans of a galactic hyperdrive to the engineer who builds it. Deliveries are paid on docking at the destination and hunts on docking anywhere; the job is saved with the commander |
 | Game | `game.h` | Ties it together: docked, flying or dead; launching; hyperspace with a countdown, fuel and mass lock; kills pay bounties and raise the rank; shooting the police or traders makes an offender; shooting the station brings the police; an escape pod saves the pilot; the player's input (`FlightInput`, from `input.h`) flies the ship |
 | Bot pilot | `bot.h` | A computer pilot that plays through the same input as a person: it fights, jumps, docks and trades |
 
@@ -347,10 +348,21 @@ section that thins out to the drone and an open fifth so that it can loop for as
 from synthesis at start-up (a second or two) and is the same every time. Nothing in it is taken from any existing piece
 of music.
 
-It plays whenever the ship is docked, on every station screen (status, market, equipment, chart), fades in and out
-rather than starting with a click, drops to a low level behind the pause menu, and is silent on the title, in flight and
-on the end screen, where the engine drone and the effects take over. F2 mutes it with the rest of the sound.
-`SoundMixer::SetMusic` controls it, and `sound_demo` writes it as `station_theme.wav`.
+It plays whenever the ship is docked, on every station screen (status, market, equipment, shipyard, missions, chart),
+fades in and out rather than starting with a click, and drops to a low level behind the pause menu.
+
+There are three more pieces, each an original loop made the same way, from synthesis at start-up:
+
+| Piece | Plays | What it is |
+| --- | --- | --- |
+| Title theme | On the title screen | Slow and wide and a little hopeful: 16 bars in E minor at 68 beats a minute, pads and a ghostly voice carrying a long melody over chords that lean toward major, with bells and a slow pulse coming in halfway |
+| Fight theme | In flight while a pirate, an alien or (for a wanted pilot) the police are within 9 km, and for 8 seconds after | Hard and driving: 16 bars in D minor at 132 beats a minute, a kick on every beat, a plucked bass on the eighths, a fast plucked pattern in the second half and bell stabs over dark pads |
+| Jump theme | From the start of the hyperspace countdown to the end of the arrival | A rising swell of pads, a gliding voice, bells climbing and a rush of noise, with a pulse that speeds up: 8 bars at 120 beats a minute |
+
+The pieces fade on their own, so changing from one to the next is a crossfade. The first flight, with no enemies, and the
+end screen are silent, and the engine drone and the effects take over. F2 mutes it with the rest of the sound.
+`SoundMixer::SetMusic(track, level)` controls each piece, `GameUi::MusicLevel(track)` says how loud each should be, and
+`sound_demo` writes them as `station_theme.wav`, `title_theme.wav`, `fight_theme.wav` and `jump_theme.wav`.
 
 `SoundMixer` (`sound.h`) plays the effects over each other into a buffer of samples (24 voices, a soft limiter so a
 crowd of sounds never crackles). It touches no audio device, so the game window feeds it to SDL2's audio in a callback,
@@ -386,4 +398,5 @@ released here under the MIT licence.
 
 ## What is not done yet
 
-- More music: there is the station theme, but none for the title, a fight or a jump
+- The story is five jobs long; there is nothing to do for the pilot who has finished it but trade and fight
+- The music is four loops: none changes with the system, the danger or how the fight is going

@@ -543,19 +543,55 @@ float GameUi::EngineLevel() const {
 
 /// How loud the station music is to be: it plays in the station, whatever the screen (status, trading, equipment, the
 /// charts), and not on the title, in flight or on the end screen. The pause menu leaves it playing, quietly.
-float GameUi::MusicLevel() const {
-  switch (screen_) {
-    case Screen::kStatus:
-    case Screen::kMarket:
-    case Screen::kEquipment:
-    case Screen::kShipyard:
-    case Screen::kMissions:
-    case Screen::kChart:
-    case Screen::kSystem:
-      return paused_ ? 0.2f : 0.5f;
-    default:
+float GameUi::MusicLevel(MusicTrack track) const {
+  switch (track) {
+    case MusicTrack::kStation:
+      switch (screen_) {
+        case Screen::kStatus:
+        case Screen::kMarket:
+        case Screen::kEquipment:
+        case Screen::kShipyard:
+        case Screen::kMissions:
+        case Screen::kChart:
+        case Screen::kSystem:
+          return paused_ ? 0.2f : 0.5f;
+        default:
+          return -1.0f;
+      }
+    case MusicTrack::kTitle:
+      return screen_ == Screen::kTitle ? 0.5f : -1.0f;
+    case MusicTrack::kJump:
+      if (screen_ == Screen::kFlight && (game_.jump_countdown() > 0.0 || game_.hyperspace_warp() > 0.0)) {
+        return paused_ ? 0.15f : 0.45f;
+      }
+      return -1.0f;
+    case MusicTrack::kFight:
+      if (screen_ == Screen::kFlight && fight_hold_ > 0.0 && game_.jump_countdown() <= 0.0 &&
+          game_.hyperspace_warp() <= 0.0) {
+        return paused_ ? 0.15f : 0.4f;
+      }
       return -1.0f;
   }
+  return -1.0f;
+}
+
+/// Is a hostile ship or missile close: pirates and aliens, and the police when the pilot is wanted
+bool GameUi::InCombat() const {
+  const Entity* me = game_.player();
+  if (me == nullptr) {
+    return false;
+  }
+  for (const Entity& e : game_.world().entities()) {
+    if (!e.alive || e.id == me->id || (e.kind != EntityKind::kShip && e.kind != EntityKind::kMissile)) {
+      continue;
+    }
+    const bool hostile =
+        e.team == Team::kPirate || e.team == Team::kAlien || (e.team == Team::kPolice && game_.world().player_wanted());
+    if (hostile && Distance(e.position, me->position) < 9000.0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void GameUi::Say(const std::string& text) {
@@ -895,6 +931,7 @@ void GameUi::Update(const FlightInput& input, double seconds) {
     return;
   }
   if (screen_ != Screen::kFlight) {
+    fight_hold_ = 0.0;
     return;
   }
   // A view key chosen again goes back to the front view, so a glance behind or to the side is one key to look and the
@@ -921,6 +958,7 @@ void GameUi::Update(const FlightInput& input, double seconds) {
   if (!paused_ && !chart_open_ && !help_open_) {
     const int system_before = game_.commander().system;
     game_.Update(input, seconds);
+    fight_hold_ = InCombat() ? 8.0 : std::max(0.0, fight_hold_ - seconds);
     const bool jumping = game_.jump_countdown() > 0.0;
     if (jumping && !was_jumping_) {
       Cue(SoundEffect::kHyperCharge);

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "coriolis/adlib_synth.h"
+#include "coriolis/music.h"
 
 namespace coriolis {
 
@@ -45,9 +46,15 @@ class SoundMixer {
   /// the music fades in and out over a second or two, and starts again from the beginning each time it comes back.
   /// The first call that wants music makes it if `PrepareMusic` has not (it takes a moment, so a front end calls that
   /// when it starts).
-  void SetMusic(float level);
+  void SetMusic(float level) { SetMusic(MusicTrack::kStation, level); }
+  /// The same for any of the tracks. Several can play at once, each fading on its own, so changing the music is a
+  /// crossfade: ask for the new one and let the old one go.
+  void SetMusic(MusicTrack track, float level);
+  /// Make one track now, or with no argument all of them
   void PrepareMusic();
-  float music_gain() const { return static_cast<float>(music_gain_); }
+  void PrepareMusic(MusicTrack track);
+  float music_gain() const { return music_gain(MusicTrack::kStation); }
+  float music_gain(MusicTrack track) const { return static_cast<float>(music_[static_cast<std::size_t>(track)].gain); }
 
   /// 0 (silent) to 1 (full): the volume of everything
   void set_master_volume(float volume);
@@ -82,11 +89,14 @@ class SoundMixer {
   double engine_noise_ = 0.0;
   std::uint32_t engine_rng_ = 12345;
 
-  // The station music
-  std::vector<std::int16_t> music_;
-  std::size_t music_position_ = 0;
-  float music_target_ = -1.0f;
-  double music_gain_ = 0.0;
+  // The music, a track of the loops of music.h each
+  struct MusicState {
+    std::vector<std::int16_t> samples;
+    std::size_t position = 0;
+    float target = -1.0f;
+    double gain = 0.0;
+  };
+  std::array<MusicState, kMusicTrackCount> music_;
 };
 
 }  // namespace coriolis

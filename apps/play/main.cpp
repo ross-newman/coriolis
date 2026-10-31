@@ -217,13 +217,13 @@ class Audio {
     SDL_UnlockAudioDevice(device_);
   }
 
-  /// The station music's level, 0 to 1, or below 0 for none
-  void SetMusic(float level) {
+  /// A piece of music's level, 0 to 1, or below 0 for none
+  void SetMusic(MusicTrack track, float level) {
     if (device_ == 0) {
       return;
     }
     SDL_LockAudioDevice(device_);
-    mixer_->SetMusic(muted_ ? -1.0f : level);
+    mixer_->SetMusic(track, muted_ ? -1.0f : level);
     SDL_UnlockAudioDevice(device_);
   }
 
@@ -601,7 +601,9 @@ int main(int argc, char** argv) {
       audio.Play(cue);
     }
     audio.SetEngine(ui.EngineLevel());
-    audio.SetMusic(ui.MusicLevel());
+    for (const MusicTrack track : {MusicTrack::kStation, MusicTrack::kTitle, MusicTrack::kFight, MusicTrack::kJump}) {
+      audio.SetMusic(track, ui.MusicLevel(track));
+    }
 
     // Keep the height, and take the width from the shape of the window, so the picture always fills it. The pixels stay
     // square, and the layout of everything follows the size of the picture.
