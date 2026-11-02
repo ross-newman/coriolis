@@ -110,6 +110,9 @@ four original pieces of music that loop and crossfade into each other. F2 turns 
 | G | Galactic chart |
 | P or Esc | Pause menu |
 | F1 | The list of keys, in the game |
+| F2 | Sound on and off |
+| F3 | Picture size: auto, 540, 720, 1080 and native (the window title says which) |
+| F11 or Alt+Enter | Full screen on and off |
 | Hold Backspace | Eject in the escape pod |
 
 Xbox 360, Xbox One and Xbox Elite controllers work too: the left stick pitches and rolls, the right stick yaws and sets
