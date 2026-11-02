@@ -126,21 +126,31 @@ float SegmentDistance(float px, float py, float ax, float ay, float bx, float by
 
 }  // namespace
 
-void DrawText(Image& image, const std::string& text, std::int64_t x, std::int64_t y, std::uint32_t scale, Rgb colour) {
-  scale = std::max<std::uint32_t>(1, scale);
-  const float s = static_cast<float>(scale);
+float UiScale(const Image& image) {
+  const float by_height = static_cast<float>(image.height()) / 240.0f;
+  const float by_width = static_cast<float>(image.width()) / 400.0f;
+  return std::max(1.0f, std::min(by_height, by_width));
+}
+
+void DrawText(Image& image, const std::string& text, std::int64_t x, std::int64_t y, float scale, Rgb colour) {
+  const float s = std::max(1.0f, scale);
   const float half = std::max(1.1f, 0.7f * s) / 2.0f;
   const std::int64_t width = static_cast<std::int64_t>(image.width());
   const std::int64_t height = static_cast<std::int64_t>(image.height());
   const std::array<Glyph, 128>& font = Font();
 
   // The pixels a character can touch: its cell, and a margin of two pixels all round for the thickness of the strokes
-  const std::int64_t cell_w = static_cast<std::int64_t>(6 * scale) + 4;
-  const std::int64_t cell_h = static_cast<std::int64_t>(7 * scale) + 4;
+  // (one more across, for the fraction of a pixel a character may start at)
+  const std::int64_t cell_w = static_cast<std::int64_t>(std::ceil(6.0f * s)) + 5;
+  const std::int64_t cell_h = static_cast<std::int64_t>(std::ceil(7.0f * s)) + 4;
   std::vector<float> coverage(static_cast<std::size_t>(cell_w * cell_h));
 
-  std::int64_t x0 = x;
+  // Characters advance by a fractional number of pixels, so a scale that is not a whole number still spaces them evenly
+  double pen = static_cast<double>(x);
   for (const char raw : text) {
+    const std::int64_t x0 = static_cast<std::int64_t>(std::floor(pen));
+    const float shift = static_cast<float>(pen - static_cast<double>(x0));
+    pen += 6.0 * static_cast<double>(s);
     const unsigned char upper = static_cast<unsigned char>(std::toupper(static_cast<unsigned char>(raw)));
     const Glyph* glyph = upper < 128 ? &font[upper] : nullptr;
     if (glyph != nullptr && !glyph->empty() && x0 + cell_w > 0 && x0 < width && y + cell_h > 0 && y < height) {
@@ -150,9 +160,9 @@ void DrawText(Image& image, const std::string& text, std::int64_t x, std::int64_
         for (std::size_t i = 0; i < stroke.size(); ++i) {
           const Pt& p0 = stroke[i];
           const Pt& p1 = stroke[std::min(i + 1, stroke.size() - 1)];
-          const float ax = 2.0f + (0.5f + p0.x) * s;
+          const float ax = 2.0f + shift + (0.5f + p0.x) * s;
           const float ay = 2.0f + (0.5f + p0.y) * s;
-          const float bx = 2.0f + (0.5f + p1.x) * s;
+          const float bx = 2.0f + shift + (0.5f + p1.x) * s;
           const float by = 2.0f + (0.5f + p1.y) * s;
           const std::int64_t min_x = std::max<std::int64_t>(0, static_cast<std::int64_t>(std::floor(std::min(ax, bx) - half - 1.0f)));
           const std::int64_t max_x = std::min<std::int64_t>(cell_w - 1, static_cast<std::int64_t>(std::ceil(std::max(ax, bx) + half + 1.0f)));
@@ -186,7 +196,6 @@ void DrawText(Image& image, const std::string& text, std::int64_t x, std::int64_
         }
       }
     }
-    x0 += static_cast<std::int64_t>(6 * scale);
   }
 }
 
@@ -204,11 +213,11 @@ void Cover(Image& image, std::int64_t x, std::int64_t y, Rgb colour, float c) {
 }
 
 /// Half the width of a stroke at a scale: the same as the strokes of the text
-float StrokeHalfWidth(std::uint32_t scale) { return std::max(1.1f, 0.7f * static_cast<float>(std::max<std::uint32_t>(1, scale))) / 2.0f; }
+float StrokeHalfWidth(float scale) { return std::max(1.1f, 0.7f * std::max(1.0f, scale)) / 2.0f; }
 
 }  // namespace
 
-void DrawLine(Image& image, float x0, float y0, float x1, float y1, std::uint32_t scale, Rgb colour) {
+void DrawLine(Image& image, float x0, float y0, float x1, float y1, float scale, Rgb colour) {
   const float half = StrokeHalfWidth(scale);
   const std::int64_t min_x = static_cast<std::int64_t>(std::floor(std::min(x0, x1) - half - 1.0f));
   const std::int64_t max_x = static_cast<std::int64_t>(std::ceil(std::max(x0, x1) + half + 1.0f));
@@ -222,7 +231,7 @@ void DrawLine(Image& image, float x0, float y0, float x1, float y1, std::uint32_
   }
 }
 
-void DrawCircle(Image& image, float cx, float cy, float radius, std::uint32_t scale, Rgb colour) {
+void DrawCircle(Image& image, float cx, float cy, float radius, float scale, Rgb colour) {
   const float half = StrokeHalfWidth(scale);
   const float reach = radius + half + 1.0f;
   for (std::int64_t y = std::max<std::int64_t>(0, static_cast<std::int64_t>(std::floor(cy - reach)));

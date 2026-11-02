@@ -22,22 +22,29 @@ const Rgb kBright{255, 255, 255};
 
 struct Page {
   Image& image;
-  std::uint32_t scale;
+  float scale;
   std::int64_t line_height;
   std::int64_t margin;
   std::int64_t y;
 
   explicit Page(Image& img) : image(img) {
     img.Clear({4, 8, 6});
-    scale = std::max<std::uint32_t>(1, img.height() / 200);
-    line_height = static_cast<std::int64_t>(10 * scale);
-    margin = static_cast<std::int64_t>(8 * scale);
+    scale = UiScale(img);
+    line_height = static_cast<std::int64_t>(std::lround(10.0f * scale));
+    margin = static_cast<std::int64_t>(std::lround(8.0f * scale));
     y = margin;
   }
 
+  /// How far across the picture a column starts
+  std::int64_t ColumnX(std::int64_t column) const {
+    return margin + static_cast<std::int64_t>(std::lround(static_cast<float>(column) * 6.0f * scale));
+  }
+
   void Title(const std::string& text) {
-    const std::int64_t w = static_cast<std::int64_t>(text.size()) * 6 * scale;
-    DrawText(image, text, (static_cast<std::int64_t>(image.width()) - w) / 2, y, scale, kTitle);
+    // Made smaller if it would not fit across the picture
+    const float fit = std::min(scale, static_cast<float>(image.width() - 2 * margin) / (6.0f * static_cast<float>(std::max<std::size_t>(1, text.size()))));
+    const std::int64_t w = static_cast<std::int64_t>(static_cast<float>(text.size()) * 6.0f * fit);
+    DrawText(image, text, (static_cast<std::int64_t>(image.width()) - w) / 2, y, fit, kTitle);
     y += line_height;
     for (std::int64_t x = margin; x < static_cast<std::int64_t>(image.width()) - margin; ++x) {
       image.Set(x, y, {60, 110, 80});
@@ -45,15 +52,21 @@ struct Page {
     y += line_height / 2;
   }
 
+  /// A line of text at a column, made smaller if it would run off the right of the picture
+  void Put(const std::string& text, std::int64_t column, Rgb colour) {
+    const std::int64_t x = ColumnX(column);
+    const float room = static_cast<float>(static_cast<std::int64_t>(image.width()) - margin - x);
+    const float fit = std::min(scale, room / (6.0f * static_cast<float>(std::max<std::size_t>(1, text.size()))));
+    DrawText(image, text, x, y, std::max(1.0f, fit), colour);
+  }
+
   void Line(const std::string& text, Rgb colour = kText, std::int64_t column = 0) {
-    DrawText(image, text, margin + column * 6 * static_cast<std::int64_t>(scale), y, scale, colour);
+    Put(text, column, colour);
     y += line_height;
   }
 
   /// Text at a column without moving down
-  void At(const std::string& text, std::int64_t column, Rgb colour = kText) {
-    DrawText(image, text, margin + column * 6 * static_cast<std::int64_t>(scale), y, scale, colour);
-  }
+  void At(const std::string& text, std::int64_t column, Rgb colour = kText) { Put(text, column, colour); }
 
   void Next() { y += line_height; }
   void Gap() { y += line_height / 2; }
@@ -230,7 +243,7 @@ void DrawMarketScreen(Image& image, const Game& game, int selected, float angle)
 
   // The highlighted good in 3D, to the right of the columns, when the picture is wide enough to have room
   if (selected >= 0 && selected < static_cast<int>(kCommodityCount)) {
-    const std::int64_t x0 = p.margin + 52 * 6 * static_cast<std::int64_t>(p.scale);
+    const std::int64_t x0 = p.ColumnX(52);
     const std::int64_t room_w = static_cast<std::int64_t>(image.width()) - x0 - p.margin;
     const std::int64_t room_h = static_cast<std::int64_t>(image.height()) - list_top - p.margin;
     DrawPreview(image, GetCommodityModel(static_cast<Commodity>(selected)), x0, list_top, room_w,
@@ -395,44 +408,33 @@ void DrawChartScreen(Image& image, const Game& game) {
   const auto sy = [&](const StarSystem& s) { return oy + s.y * unit; };
 
   const StarSystem& here = game.system();
-  // The distance the fuel will carry the ship, in chart units (a light year is four)
-  const double reach = game.commander().fuel * 4.0 * unit;
-  for (int i = 0; i < 360; ++i) {
-    const double a = 2.0 * 3.141592653589793 * i / 360.0;
-    image.Set(static_cast<std::int64_t>(sx(here) + reach * std::cos(a)), static_cast<std::int64_t>(sy(here) + reach * std::sin(a)),
-              {70, 70, 150});
-  }
+  // The distance the fuel will carry the ship, in chart units (a light year is four). Everything drawn on the chart is
+  // sized from the text scale or the chart unit, so it keeps its proportions at any resolution.
+  const float stroke = std::max(1.0f, 0.4f * p.scale);
+  const float dot = std::max(0.9f, static_cast<float>(0.18 * unit));
+  DrawCircle(image, static_cast<float>(sx(here)), static_cast<float>(sy(here)),
+             static_cast<float>(game.commander().fuel * 4.0 * unit), stroke, {70, 70, 150});
+  const float name_scale = std::max(1.0f, 0.45f * p.scale);
   for (const StarSystem& s : galaxy.systems()) {
-    const std::int64_t x = static_cast<std::int64_t>(sx(s));
-    const std::int64_t y = static_cast<std::int64_t>(sy(s));
+    const float x = static_cast<float>(sx(s));
+    const float y = static_cast<float>(sy(s));
     const bool in_range = galaxy.DistanceLy(here.index, s.index) <= game.commander().fuel;
-    const Rgb c = in_range ? Rgb{255, 240, 160} : Rgb{150, 150, 130};
-    image.Set(x, y, c);
-    image.Set(x + 1, y, c);
-    if (p.scale > 1) {
-      image.Set(x, y + 1, c);
-      image.Set(x + 1, y + 1, c);
-    }
+    DrawDisc(image, x, y, dot, in_range ? Rgb{255, 240, 160} : Rgb{150, 150, 130});
     if (in_range && s.index != here.index && galaxy.DistanceLy(here.index, s.index) <= 4.0) {
-      DrawText(image, s.name, x + 3, y - 3, 1, {120, 150, 130});
+      DrawText(image, s.name, static_cast<std::int64_t>(x + dot + 2.0f), static_cast<std::int64_t>(y - 3.5f * name_scale), name_scale,
+               {120, 150, 130});
     }
   }
   // Where we are, and where we are going
-  const std::int64_t hx = static_cast<std::int64_t>(sx(here));
-  const std::int64_t hy = static_cast<std::int64_t>(sy(here));
-  const std::int64_t arm = 3 * static_cast<std::int64_t>(p.scale);
-  for (std::int64_t k = -arm; k <= arm; ++k) {
-    image.Set(hx + k, hy, {255, 60, 60});
-    image.Set(hx, hy + k, {255, 60, 60});
-  }
+  const float hx = static_cast<float>(sx(here));
+  const float hy = static_cast<float>(sy(here));
+  const float arm = 3.0f * p.scale;
+  DrawLine(image, hx - arm, hy, hx + arm, hy, stroke, {255, 60, 60});
+  DrawLine(image, hx, hy - arm, hx, hy + arm, stroke, {255, 60, 60});
   const int dest = game.selected_system();
   if (dest >= 0) {
     const StarSystem& d = galaxy.system(dest);
-    const double r = 4.0 * p.scale;
-    for (int i = 0; i < 90; ++i) {
-      const double a = 2.0 * 3.141592653589793 * i / 90.0;
-      image.Set(static_cast<std::int64_t>(sx(d) + r * std::cos(a)), static_cast<std::int64_t>(sy(d) + r * std::sin(a)), {80, 255, 120});
-    }
+    DrawCircle(image, static_cast<float>(sx(d)), static_cast<float>(sy(d)), 3.0f * p.scale, stroke, {80, 255, 120});
   }
   p.y = static_cast<std::int64_t>(image.height()) - 3 * p.line_height;
   char line[128];

@@ -23,11 +23,11 @@ const Rgb kText{170, 230, 190};
 const Rgb kDim{100, 130, 115};
 const Rgb kBright{255, 255, 255};
 
-std::int64_t TextWidth(const std::string& text, std::uint32_t scale) {
-  return static_cast<std::int64_t>(text.size()) * 6 * static_cast<std::int64_t>(scale);
+std::int64_t TextWidth(const std::string& text, float scale) {
+  return static_cast<std::int64_t>(static_cast<float>(text.size()) * 6.0f * scale);
 }
 
-void DrawCentred(Image& image, const std::string& text, std::int64_t y, std::uint32_t scale, Rgb colour) {
+void DrawCentred(Image& image, const std::string& text, std::int64_t y, float scale, Rgb colour) {
   DrawText(image, text, (static_cast<std::int64_t>(image.width()) - TextWidth(text, scale)) / 2, y, scale, colour);
 }
 
@@ -186,28 +186,27 @@ void DrawLogoTitle(Image& image, std::int64_t y, std::int64_t height) {
 }
 
 /// The sizes of text that the title, the pause menu and the end screen all use, so they match: a heading, the items
-/// of a menu or a table, and small print. Each is a multiple of the font's 5x7 pixels, worked out from the height.
+/// of a menu or a table, and small print. They are fixed shares of the screen's text scale, so they grow with the
+/// picture at any resolution.
 struct TextSizes {
-  std::uint32_t heading;
-  std::uint32_t item;
-  std::uint32_t small;
+  float heading;
+  float item;
+  float small;
 };
 
 TextSizes SizesFor(const Image& image) {
-  const std::int64_t h = static_cast<std::int64_t>(image.height());
-  return {static_cast<std::uint32_t>(std::max<std::int64_t>(1, h / 60)),
-          static_cast<std::uint32_t>(std::max<std::int64_t>(1, h / 150)),
-          static_cast<std::uint32_t>(std::max<std::int64_t>(1, h / 180))};
+  const float s = UiScale(image);
+  return {4.0f * s, 1.6f * s, 4.0f / 3.0f * s};
 }
 
 /// The scale, made smaller if the text would not fit across 90% of the picture
-std::uint32_t FitScale(const Image& image, const std::string& text, std::uint32_t scale) {
-  const std::int64_t room = static_cast<std::int64_t>(image.width()) * 9 / 10;
-  const std::int64_t chars = static_cast<std::int64_t>(std::max<std::size_t>(1, text.size()));
-  return static_cast<std::uint32_t>(std::max<std::int64_t>(1, std::min<std::int64_t>(scale, room / (chars * 6))));
+float FitScale(const Image& image, const std::string& text, float scale) {
+  const float room = static_cast<float>(image.width()) * 0.9f;
+  const float chars = static_cast<float>(std::max<std::size_t>(1, text.size()));
+  return std::max(1.0f, std::min(scale, room / (chars * 6.0f)));
 }
 
-void DrawCentredFit(Image& image, const std::string& text, std::int64_t y, std::uint32_t scale, Rgb colour) {
+void DrawCentredFit(Image& image, const std::string& text, std::int64_t y, float scale, Rgb colour) {
   DrawCentred(image, text, y, FitScale(image, text, scale), colour);
 }
 
@@ -219,7 +218,7 @@ Rgb Scaled(Rgb colour, double f) {
 
 /// A menu: one row per item, the chosen one in brackets and bright. Returns the y below the last row.
 std::int64_t DrawMenu(Image& image, const std::vector<std::string>& items, int selected, std::int64_t y,
-                      std::uint32_t scale) {
+                      float scale) {
   for (std::size_t i = 0; i < items.size(); ++i) {
     const bool here = static_cast<int>(i) == selected;
     const std::string text = std::string(here ? "> " : "  ") + items[i] + (here ? " <" : "  ");
@@ -985,16 +984,20 @@ void GameUi::Update(const FlightInput& input, double seconds) {
 }
 
 void GameUi::DrawBar(Image& image, const std::string& text) {
-  const std::uint32_t scale = std::max<std::uint32_t>(1, image.height() / 200);
+  const float scale = UiScale(image);
+  const std::int64_t w = static_cast<std::int64_t>(image.width());
   const std::int64_t h = static_cast<std::int64_t>(image.height());
-  const std::int64_t bar = static_cast<std::int64_t>(11 * scale);
+  const std::int64_t bar = static_cast<std::int64_t>(11.0f * scale);
+  const std::int64_t pad = static_cast<std::int64_t>(4.0f * scale);
+  // Text made smaller if it would run off the picture
+  const auto fit = [&](const std::string& s) {
+    return std::max(1.0f, std::min(scale, static_cast<float>(w - 2 * pad) / (6.0f * static_cast<float>(std::max<std::size_t>(1, s.size())))));
+  };
   FillRows(image, h - bar, h, {2, 6, 4});
   FillRows(image, h - bar, h - bar + 1, {60, 110, 80});
-  DrawText(image, text, static_cast<std::int64_t>(4 * scale), h - bar + static_cast<std::int64_t>(2 * scale), scale,
-           kDim);
+  DrawText(image, text, pad, h - bar + static_cast<std::int64_t>(2.0f * scale), fit(text), kDim);
   if (message_age_ < 8.0 && !message_.empty()) {
-    DrawText(image, message_, static_cast<std::int64_t>(4 * scale), h - bar - static_cast<std::int64_t>(10 * scale),
-             scale, {255, 232, 130});
+    DrawText(image, message_, pad, h - bar - static_cast<std::int64_t>(10.0f * scale), fit(message_), {255, 232, 130});
   }
 }
 
@@ -1020,10 +1023,10 @@ void GameUi::DrawTitle(Image& image) {
     }
   }
   const TextSizes sizes = SizesFor(image);
-  const std::uint32_t big = sizes.heading;
-  DrawLogoTitle(image, h * 6 / 100, static_cast<std::int64_t>(7 * big));
-  const std::uint32_t small = sizes.small;
-  DrawCentred(image, "A SPACE TRADING AND DOGFIGHT GAME", h * 6 / 100 + static_cast<std::int64_t>(9 * big), small,
+  const float big = sizes.heading;
+  DrawLogoTitle(image, h * 6 / 100, static_cast<std::int64_t>(7.0f * big));
+  const float small = sizes.small;
+  DrawCentred(image, "A SPACE TRADING AND DOGFIGHT GAME", h * 6 / 100 + static_cast<std::int64_t>(9.0f * big), small,
               kDim);
 
   std::vector<std::string> items;
@@ -1109,12 +1112,12 @@ void GameUi::DrawHelp(Image& image) {
   const TextSizes sizes = SizesFor(image);
   const std::int64_t count = static_cast<std::int64_t>(sizeof(rows) / sizeof(rows[0]));
   // Fit the list to the picture, both ways
-  std::uint32_t scale = std::max<std::uint32_t>(1, static_cast<std::uint32_t>((h * 88 / 100) / ((count + 3) * 9)));
+  float scale = static_cast<float>(h) * 0.88f / static_cast<float>((count + 3) * 9);
   scale = std::min(scale, FitScale(image, "BACKSPACE (HOLD)   PITCH AND ROLL (DOWN IS NOSE UP)", sizes.item));
-  scale = std::max<std::uint32_t>(1, scale);
-  const std::int64_t line = static_cast<std::int64_t>(9 * scale);
+  scale = std::max(1.0f, scale);
+  const std::int64_t line = static_cast<std::int64_t>(9.0f * scale);
   std::int64_t y = (h - (count + 3) * line) / 2;
-  DrawCentred(image, "FLIGHT CONTROLS", y, scale + scale / 2, kTitleColour);
+  DrawCentred(image, "FLIGHT CONTROLS", y, scale * 1.5f, kTitleColour);
   y += 2 * line;
   const std::int64_t column = (static_cast<std::int64_t>(image.width()) - TextWidth("BACKSPACE (HOLD)   PITCH AND ROLL (DOWN IS NOSE UP)", scale)) / 2;
   for (const auto& r : rows) {
@@ -1235,8 +1238,8 @@ void GameUi::DrawDead(Image& image) {
 
   // The heading, with a shadow, fading in
   const double fade = std::clamp(t / 0.5, 0.0, 1.0);
-  const std::uint32_t heading = FitScale(image, "GAME OVER", sizes.heading);
-  const std::int64_t shadow = std::max<std::int64_t>(1, heading / 6);
+  const float heading = FitScale(image, "GAME OVER", sizes.heading);
+  const std::int64_t shadow = std::max<std::int64_t>(1, static_cast<std::int64_t>(heading / 6.0f));
   DrawCentred(image, "GAME OVER", h * 3 / 100 + shadow, heading, Scaled({90, 18, 14}, fade));
   DrawCentred(image, "GAME OVER", h * 3 / 100, heading, Scaled({255, 90, 70}, fade));
 
@@ -1266,10 +1269,10 @@ void GameUi::DrawDead(Image& image) {
       widest = line;
     }
   }
-  const std::uint32_t item = FitScale(image, widest, sizes.item);
-  const std::int64_t column = static_cast<std::int64_t>(widest.size()) * 6 * static_cast<std::int64_t>(item);
+  const float item = FitScale(image, widest, sizes.item);
+  const std::int64_t column = TextWidth(widest, item);
   const std::int64_t left = (w - column) / 2;
-  const std::int64_t value_x = left + static_cast<std::int64_t>(label_width + 2) * 6 * static_cast<std::int64_t>(item);
+  const std::int64_t value_x = left + TextWidth(std::string(label_width + 2, ' '), item);
   std::int64_t y = h * 46 / 100;
   for (std::size_t i = 0; i < rows.size(); ++i) {
     const double shown = std::clamp((t - 1.0 - 0.22 * static_cast<double>(i)) / 0.25, 0.0, 1.0);
